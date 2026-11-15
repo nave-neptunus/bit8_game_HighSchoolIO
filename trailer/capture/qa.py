@@ -9,17 +9,19 @@ vid, out = sys.argv[1], sys.argv[2]
 proj = Path(__file__).resolve().parents[1]   # the trailer/ Remotion project
 f = {c["name"]: c["frames"] for c in json.load(open(f"{proj}/src/clips.json"))["clips"]}
 f["end_b"] += 12   # HOLD in src/edit.ts
-segs = [["title"],["grass","battle"],["captain","journal"],["area2","pharmacist","abx"],["sb_intro","sb_culture","sb_clean","sb_target"],["end_a","end_b"]]   # keep in sync with src/edit.ts
+segs = [["title"], 270, ["tour1","boss_a1","tour2","boss_a2","tour3","boss_a3"], ["battle"], 300, ["pharmacist","abx"], ["sb_intro","sb_target"]]   # keep in sync with src/edit.ts (a number = full-board scene of that length)
 joins = ["fade"] * len(segs)
-t = 110 - 14; marks = [("intro end", t + 14)]
+t = 99 - 14; marks = [("intro end", t + 14)]
 for s, j in zip(segs, joins):
+    if isinstance(s, int):
+        t += s - 14; marks.append((f"after board ({s})", t + 14 + 4)); continue
     start = t; acc = 0
     for c in s[1:]:
         acc += f[s[s.index(c) - 1]]; marks.append((f"cut->{c}", start + acc + 2))
     t += sum(f[c] for c in s)
     if j != "cut": t -= 14
     marks.append((f"after {s[-1]} ({j})", t + 14 + 4))
-marks.append(("outro", t + 180 - 14 + 30))
+marks.append(("outro", t + 150 - 14 + 30))
 W, H = 480, 270; cols = 4
 sheet = Image.new("RGB", (cols * W, ((len(marks) + cols - 1) // cols) * H), "black")
 for i, (lab, fr) in enumerate(marks):

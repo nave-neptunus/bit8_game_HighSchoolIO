@@ -8,23 +8,26 @@ Look: a sunny classroom. The game's handheld sits on the left; on the right a gr
 "why it matters" stat and the end card are full chalkboards. The previous dark "tech" look was dropped because it
 read as AI-made.
 
-## Story (6 lessons, all in `src/edit.ts`)
+## Story (7 parts, all in `src/edit.ts`)
 
-Paced slowly on purpose: an earlier cut had 10 short sections and felt rushed, so related clips were merged into
-6 longer lessons (5 to 18 s each), chalk writes at 1.7 frames per letter, and the sticky note only lands after the
-headline and body have had time to be read. Clips that end on static text hold their last frame (`HOLD` in
-`src/edit.ts`). Total is exactly 2,400 frames (1:20).
+Built to be watched slowly, with little text: lesson boards carry one chalk headline and one sticky note, and two
+full-board "cast" scenes introduce who you play as and who you fight. Total is exactly 2,400 frames (1:20).
+A voice-over about the camera-gesture controls (computer vision) and the impact is planned on top of / after it, so
+the game audio stays modest.
 
-| # | Gameplay clips | Board headline | Sticky note (the education beat) |
-| --- | --- | --- | --- |
-| 1 | title | learn how your body fights back | Your immune system is a team of cells, and each one has a job. |
-| 2 | grass, battle | real cells, real jobs | Neutrophils rush in first. Pus is mostly dead neutrophils! |
-| 3 | captain, journal | meet the germs | About 1 in 3 people carry staph in their nose (CDC). |
-| 4 | area2, pharmacist, abx | free antibiotics? | The flu is a virus. Antibiotics do not work on viruses (CDC). |
-| 5 | sb_intro, sb_culture, sb_clean, sb_target | think like a doctor | Biofilms shield bacteria, so doctors test before they treat. |
-| 6 | end_a, end_b | choices have consequences | Wasting antibiotics helps bacteria become resistant. |
+| # | On screen | Board |
+| --- | --- | --- |
+| 1 | title clip (Nurse Ada: you've been shrunk down) | "you're shrunk down inside Maya" + note: Maya scraped her knee, help her immune system |
+| 2 | full board, no gameplay | YOUR TEAM: the 5 cells, their role and their main attacks |
+| 3 | tour1, boss_a1, tour2, boss_a2, tour3, boss_a3 | "3 areas inside Maya": the area on screen lights up with its boss name |
+| 4 | battle | "pick the right attack" + note: STRONG! marks the best move |
+| 5 | full board, no gameplay | WHO YOU FIGHT: 7 germs with one-line descriptions, the 3 bosses with area + description |
+| 6 | pharmacist, abx | "free antibiotics?" + note: the flu is a virus, antibiotics don't work on viruses (CDC) |
+| 7 | sb_intro, sb_target | "think like a doctor" + note: wasted antibiotics made the superbug stronger |
 
-The boss1 / boss2 clips are captured but unused in this cut.
+Cast text lives in `src/components/Cast.tsx` (`TEAM`, `GERMS`, `BOSSES`, `AREAS`), taken from the game's own
+`engine.js` (cell blurbs and moves) and `world.js`. Captured but unused in this cut: grass, captain, area2, journal,
+boss1, boss2, sb_culture, sb_clean, end_a, end_b, credits.
 
 Then the impact board (1.27 million deaths directly caused by drug-resistant infections in 2019, GRAM study,
 The Lancet 2022) and the end card (what kids learn, play link). Every fact matches the sourced science notes in the
@@ -40,6 +43,8 @@ root `CLAUDE.md`.
 - `src/components/Chalk.tsx`: `Board` (wood frame, slate, eraser smudges, faint old writing, chalk tray),
   `ChalkWrite` (word-by-word chalk writing, `*hot*` words in yellow with a drawn underline), `ChalkStroke`
   (hand-drawn underline / circle / check / arrow), `StickyNote`.
+- `src/components/Cast.tsx`: `TeamBoard` (cells + attacks), `CastBoard` (germs + bosses), `TourBoard` (area list
+  for the world tour), `Magnet` (sprites stuck on the board).
 - `src/components/Layers.tsx`: the classroom wall background and the finishing layers (warm grade, grain, vignette).
 - `src/theme.ts`: colors, fonts (Cabin Sketch for chalk headlines, Kalam for handwriting, Caveat for red pen,
   Press Start 2P), easing and spring presets.
@@ -65,6 +70,10 @@ Screen recording would drop frames and can't record WebAudio cleanly, so capture
 3. `capture/render_audio.py` loads the game's real `audio.js` (patched to expose its synth) into an
    `OfflineAudioContext`, replays each clip's logged cues, and writes one WAV per clip, plus `intro.wav` (title
    song) and `outro.wav` (ending song).
+   `capture/tour.py <out>` records the world tour on its own: a walk through each area's route (captains marked
+   beaten so nobody interrupts) and each boss sliding in on its battle screen (clips tour1..3, boss_a1..3).
+   Render its audio with `render_audio.py` the same way and copy the folders and WAVs into `public/`, adding their
+   frame counts to `src/clips.json`.
 4. `capture/stage.py` copies frames and audio into `public/` and writes `src/clips.json`.
 
 ## Rebuild from scratch
@@ -81,6 +90,7 @@ pip install playwright imageio-ffmpeg pillow numpy && playwright install chromiu
 
 # 3. capture, audio, stage (capture takes a few minutes)
 python capture/scenes.py /tmp/ir_clips
+python capture/tour.py /tmp/ir_tour   # then render_audio.py on it too, and copy into public/ (see above)
 python capture/render_audio.py /tmp/ir_clips /tmp/ir_audio
 python capture/stage.py /tmp/ir_clips /tmp/ir_audio .
 
@@ -116,6 +126,6 @@ Tips:
 
 ## Status and ideas
 
-Done: classroom restyle, slower 6-lesson 1:20 cut, full render with game audio, QA'd cuts and loudness.
+Done: classroom restyle, 1:20 cut with team / world tour / germs and bosses boards, minimal board text, QA'd cuts and loudness.
 Ideas: a vertical 9:16 version for social (stack the handheld above the board), voice-over, re-capture to show
 the new camera gesture attacks (added to the game after this capture).

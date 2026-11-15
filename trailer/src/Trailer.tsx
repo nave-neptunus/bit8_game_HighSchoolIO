@@ -5,6 +5,7 @@ import { fade } from "@remotion/transitions/fade";
 import { Wall, Grade, Grain, Vignette } from "./components/Layers";
 import { Board, ChalkWrite, ChalkStroke, StickyNote, chalkTexture, writeEnd } from "./components/Chalk";
 import { theme, clamp, SpringCfg } from "./theme";
+import { BIG, Magnet, TeamBoard, CastBoard, TourBoard } from "./components/Cast";
 import { SEGMENTS, Seg, INTRO, IMPACT, OUTRO, TRANS, HOLD, clipFrames, segFrames, timeline } from "./edit";
 
 const C = theme.colors;
@@ -55,8 +56,9 @@ const Lesson: React.FC<{ seg: Seg; dur: number; index: number }> = ({ seg, dur, 
   // unhurried: slow chalk, body eases in after the headline, the sticky note lands once the body has been read
   const SPEED = 1.7;
   const erase = interpolate(frame, [dur - 16, dur - 1], [0, 1], { ...clamp, easing: theme.ease.in });
-  const headEnd = writeEnd(seg.head, 12, SPEED);
-  const note = spring({ frame: frame - Math.min(headEnd + 50, dur * 0.45), fps, config: theme.spring.smooth });
+  const head = seg.head ?? "";
+  const headEnd = writeEnd(head, 12, SPEED);
+  const note = spring({ frame: frame - Math.min(headEnd + 30, dur * 0.4), fps, config: theme.spring.smooth });
   const fadeIn = (d: number) => interpolate(frame, [d, d + 18], [0, 1], { ...clamp, easing: theme.ease.out });
   const [num, ...name] = seg.kicker.split(/\s+/);
   return (
@@ -66,7 +68,7 @@ const Lesson: React.FC<{ seg: Seg; dur: number; index: number }> = ({ seg, dur, 
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: theme.fonts.hand, fontSize: 30, color: C.chalkDim, opacity: fadeIn(2), ...chalkTexture }}>
             <span>Lesson {Number(num)}: {name.join(" ").toLowerCase()}</span>
           </div>
-          <ChalkWrite text={seg.head} delay={12} size={80} speed={SPEED} style={{ marginTop: 22, fontWeight: 700 }} />
+          <ChalkWrite text={head} delay={12} size={84} speed={SPEED} style={{ marginTop: 22, fontWeight: 700 }} />
           <div style={{ marginTop: 30, fontFamily: theme.fonts.hand, fontSize: 30, lineHeight: 1.38, color: C.chalkDim, opacity: fadeIn(headEnd + 6),
             transform: `translateY(${(1 - fadeIn(headEnd + 6)) * 10}px)`, ...chalkTexture }}>{seg.body}</div>
         </div>
@@ -80,25 +82,34 @@ const Lesson: React.FC<{ seg: Seg; dur: number; index: number }> = ({ seg, dur, 
   );
 };
 
-const Section: React.FC<{ seg: Seg; index: number }> = ({ seg, index }) => (
-  <AbsoluteFill>
-    <Handheld seg={seg} />
-    <Lesson seg={seg} dur={segFrames(seg)} index={index} />
-  </AbsoluteFill>
-);
-
-// ---------- full-board scenes: intro, impact, outro ----------
-const Magnet: React.FC<{ src: string; size: number; delay: number; style?: React.CSSProperties }> = ({ src, size, delay, style }) => {
+// The tour walks area 1, its boss, area 2, its boss, area 3, its boss: light up the area of the clip on screen.
+const Tour: React.FC<{ seg: Seg; index: number }> = ({ seg, index }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
-  const p = spring({ frame: frame - delay, fps, config: theme.spring.bouncy });
-  const bob = Math.sin((frame + delay * 7) / 16) * 2.5;
-  return <Img src={staticFile(`sprites/${src}.png`)} style={{ width: size, height: size, imageRendering: "pixelated", opacity: Math.min(1, p * 2),
-    filter: "drop-shadow(4px 7px 3px rgba(0,0,0,0.45))", transform: `translateY(${bob}px) scale(${interpolate(p, [0, 1], [1.5, 1])})`, ...style }} />;
+  let t = 0, active = 0, since = 0;
+  seg.clips.forEach((c, i) => { if (i % 2 === 0 && frame >= t) { active = i / 2; since = t; } t += clipFrames(c); });
+  return <TourBoard box={BOARD} active={active} since={since} dur={segFrames(seg)} seed={index} />;
 };
 
-const BIG = { x: 150, y: 80, w: 1620, h: 820 };
+// Full-board scenes fade the chalk off at the end, like the lessons.
+const FullBoard: React.FC<{ children: React.ReactNode; dur: number }> = ({ children, dur }) => {
+  const frame = useCurrentFrame();
+  const out = interpolate(frame, [dur - 14, dur], [0, 1], { ...clamp, easing: theme.ease.in });
+  return <AbsoluteFill style={{ opacity: 1 - out * 0.15 }}>{children}</AbsoluteFill>;
+};
 
+const Section: React.FC<{ seg: Seg; index: number }> = ({ seg, index }) => {
+  const dur = segFrames(seg);
+  if (seg.kind === "team") return <FullBoard dur={dur}><TeamBoard /></FullBoard>;
+  if (seg.kind === "cast") return <FullBoard dur={dur}><CastBoard /></FullBoard>;
+  return (
+    <AbsoluteFill>
+      <Handheld seg={seg} />
+      {seg.kind === "tour" ? <Tour seg={seg} index={index} /> : <Lesson seg={seg} dur={dur} index={index} />}
+    </AbsoluteFill>
+  );
+};
+
+// ---------- full-board scenes: intro, impact, outro ----------
 const Intro: React.FC = () => {
   const frame = useCurrentFrame();
   const out = interpolate(frame, [INTRO - 12, INTRO], [0, 1], { ...clamp, easing: theme.ease.in });
