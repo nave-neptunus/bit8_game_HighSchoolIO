@@ -27,6 +27,9 @@ export const TitleSlide: React.FC = () => (
           learn how your body fights germs, and why wasting antibiotics matters
         </div>
         <ChalkStroke kind="underline" delay={-60} color={C.chalkYellow} width={7} style={{ width: 520, height: 26, marginTop: 6 }} />
+        <div style={{ marginTop: 44, fontFamily: theme.fonts.chalk, fontWeight: 700, fontSize: 46, color: C.chalk, ...chalkTexture }}>
+          Evan Arumbaka <span style={{ color: C.chalkPink }}>&amp;</span> Ayush Pande
+        </div>
       </div>
     </Board>
     <StickyNote p={1} rotate={-2.5} style={{ left: 1290, top: 770, width: 470, padding: "26px 32px 22px" }}>
