@@ -52,7 +52,7 @@ function loadSprites() {
       else if ((m = /^ui_(.+)$/.exec(name)) && UI[m[1]]) { size(UI[m[1]][1]); SPR[UI[m[1]][0]] = im; }
       else console.warn("Unknown sprite file (check the name in SPRITES.md):", f);
     };
-    im.src = "assets/sprites/" + f;
+    im.src = "assets/sprites/" + f + (window.SPRITE_VER ? "?v=" + window.SPRITE_VER : "");
   }
 }
 loadSprites();
