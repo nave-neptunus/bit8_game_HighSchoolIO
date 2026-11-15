@@ -606,6 +606,7 @@ function drawWorld() {
   for (let y = 0; y < G.map.length; y++) for (let x = 0; x < G.map[0].length; x++) {
     const t = G.map[y][x], sx = x * TS - camX, sy = y * TS - camY;
     if (sx < -TS || sy < -TS || sx > LW || sy > LH) continue;
+    if (t === "L") img([tileAt(x - 1, y), tileAt(x + 1, y), tileAt(x, y - 1), tileAt(x, y + 1)].includes("+") ? T.hub : T.path, sx, sy);   // node sits on the floor
     img(t === "~" ? T.water[wf] : TILE[t] || T.floor, sx, sy);
   }
   // sprites, back to front
@@ -779,7 +780,7 @@ function drawTitle() {
   text("RESPONSE", LW / 2 + 1, 37, 14, "#1b1428", "center"); text("RESPONSE", LW / 2, 36, 14, "#f2c94c", "center");
   text("a tiny adventure inside Maya", LW / 2, 58, 5, "#d6cde6", "center");
   ["Neutrophil", "Macrophage", "NK Cell", "Killer T Cell", "B Cell"].forEach((k, i) => img(CRE[k], 22 + i * 40, 74 + Math.round(Math.sin((G.tick + i * 9) / 10) * 2)));
-  img(PEOPLE.hero.down[Math.floor(G.tick / 16) % 2 ? 1 : 3], LW / 2 - 8, 106);
+  img(PEOPLE.hero.down[Math.floor(G.tick / 16) % 2 ? 1 : 3], LW / 2 - 12, 103, 1.5);
   text("3 AREAS  -  8 GERM CAPTAINS  -  10 GERMS", LW / 2, 132, 4, "#8a7aa0", "center");
   if (Math.floor(G.tick / 30) % 2) text("CHOOSE BELOW", LW / 2, 144, 5, "#ffffff", "center");
 }

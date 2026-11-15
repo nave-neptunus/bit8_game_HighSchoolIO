@@ -104,6 +104,11 @@ Example names: `tile_floor_1.png`, `tile_floor_2.png`, `tile_floor_3.png`.
 | `ui_badge.png` | 7×7 | **Gold star badge** shown above germ captains. |
 | `ui_sparkle.png` | 7×7 | **White twinkle** (4-point star) that blinks over hidden items. |
 
+## Status
+All 61 PNGs are done and in `assets/sprites/`. They were sliced from three sheets: people with `tools/slice_people.py`,
+cells/germs/bosses with `tools/slice_creatures.py`, and tiles + UI with `tools/slice_tiles.py` (the lymph node and sign are
+cutouts, and the game draws the floor under them). To redo one, replace its PNG and run `node make_manifest.js`.
+
 ## Count
 5 cells + 7 germs + 3 bosses + 6 people sheets + 11 tile kinds × 3 areas (water has 2 frames, so 36 tile files) + 4 UI = **61 PNG files**.
 Start with the ones players see most: the 5 cells, the 7 germs, the 3 bosses, then `person_hero.png`.
