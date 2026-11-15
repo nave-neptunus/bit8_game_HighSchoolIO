@@ -75,6 +75,8 @@ Each character is **one sprite sheet, 64×64**: 4 columns × 4 rows.
 | `person_sam.png` | Medic Sam | Young medic in an **orange vest**. | orange `#f2994a`, `#fff1e0` | black hair `#1b1428`, skin `#8a5a3c` |
 | `person_jo.png` | Intern Jo | Intern in **blue scrubs**. | blue `#4a7fd9`, `#e3ecfb` | auburn hair `#a8532b`, skin `#f0b98a` |
 
+Done: all 6 people sheets (sliced from one image with `tools/slice_people.py`).
+
 ## 5. Map tiles
 **16×16 each, seamless** (tiles sit edge to edge). Every area has its own color set, so each tile needs **3 versions**:
 `_1` The Scrape (skin / knee, warm peach and red), `_2` The Cough (lungs, pink and yellow-green), `_3` The Superbug (hospital stitches, cool blue-grey and purple).
