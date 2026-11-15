@@ -3,18 +3,17 @@
   "use strict";
   const LABELS = ["fist", "peace", "ok_sign", "thumbs_up", "background"];
   const NAMES = ["FIST", "PEACE", "OK SIGN", "THUMBS UP"];
-  const CONFIDENCE = 0.90;
-  const HOLD_MS = 600;
+  const CONFIDENCE = 0.70;
   const COOLDOWN_MS = 1200;
   const INTERVAL_MS = 100;
   const panel = document.getElementById("gesturePanel");
   const video = document.getElementById("gestureVideo");
   const guide = document.getElementById("gestureGuide");
   const status = document.getElementById("gestureStatus");
-  const holdFill = document.getElementById("gestureHoldFill");
+  const confidenceFill = document.getElementById("gestureConfidenceFill");
   const moves = document.getElementById("gestureMoves");
   let stream = null, model = null, enabled = false, ready = false;
-  let runId = 0, predicting = false, candidate = -1, candidateSince = 0, cooldownUntil = 0;
+  let runId = 0, predicting = false, cooldownUntil = 0;
   let moveNames = [];
 
   function setStatus(message) { status.textContent = message; }
@@ -28,10 +27,10 @@
       moves.appendChild(label);
     });
   }
-  function resetCandidate() { candidate = -1; candidateSince = 0; holdFill.style.width = "0%"; }
+  function resetMeter() { confidenceFill.style.width = "0%"; }
   function announceMode() { window.dispatchEvent(new Event("gesture-mode-change")); }
   function disable() {
-    runId++; enabled = false; ready = false; predicting = false; resetCandidate();
+    runId++; enabled = false; ready = false; predicting = false; resetMeter();
     if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
     video.pause(); video.srcObject = null; panel.hidden = true; setStatus("Camera off."); announceMode();
   }
@@ -78,8 +77,8 @@
       setStatus("Loading local gesture model...");
       await loadModel();
       if (id !== runId) return false;
-      enabled = true; ready = true; resetCandidate(); announceMode();
-      setStatus("Ready. Hold a gesture during battle.");
+      enabled = true; ready = true; resetMeter(); announceMode();
+      setStatus("Ready. Show a gesture during battle.");
       predictLoop(id);
       return true;
     } catch (error) {
@@ -104,15 +103,11 @@
   function acceptPrediction(probabilities, now) {
     const index = probabilities.indexOf(Math.max(...probabilities));
     const confidence = probabilities[index];
+    confidenceFill.style.width = `${Math.round(confidence * 100)}%`;
     const canAttack = window.canUseGestureAttack && window.canUseGestureAttack();
-    if (!canAttack) { resetCandidate(); setStatus(`${NAMES[index] || "BACKGROUND"} ${Math.round(confidence * 100)}% · waiting for battle menu`); return; }
+    if (!canAttack) { setStatus(`${NAMES[index] || "BACKGROUND"} ${Math.round(confidence * 100)}% · waiting for battle menu`); return; }
     setStatus(`${NAMES[index] || "BACKGROUND"} ${Math.round(confidence * 100)}% · ${moveNames[index] || "no move"}`);
-    if (index === 4 || !moveNames[index] || confidence < CONFIDENCE || now < cooldownUntil) { resetCandidate(); return; }
-    if (candidate !== index) { candidate = index; candidateSince = now; }
-    const progress = Math.min(1, (now - candidateSince) / HOLD_MS);
-    holdFill.style.width = `${Math.round(progress * 100)}%`;
-    if (progress < 1) return;
-    resetCandidate();
+    if (index === 4 || !moveNames[index] || confidence < CONFIDENCE || now < cooldownUntil) return;
     if (window.submitGestureMove?.(index, "gesture")) cooldownUntil = now + COOLDOWN_MS;
   }
   async function predictLoop(id) {

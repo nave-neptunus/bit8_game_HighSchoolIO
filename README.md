@@ -17,7 +17,7 @@ Or open `index.html` in any modern browser. No install or build step.
 
 ## Optional camera attacks
 
-Choose **CAMERA ATTACKS: OFF** on the title screen or in the in-game menu to turn camera controls on. Allow camera access; a small mirrored preview opens. Hold a gesture in the guide square for about 600 ms. During battle, gestures select the active cell's first four move slots:
+Choose **CAMERA ATTACKS: OFF** on the title screen or in the in-game menu to turn camera controls on. Allow camera access; a small mirrored preview opens. During battle, a gesture fires as soon as the model reaches **70% confidence**; a 1.2-second cooldown prevents repeated attacks. Gestures select the active cell's first four move slots:
 
 | Gesture | Move slot |
 | --- | ---: |
