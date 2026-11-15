@@ -6,7 +6,9 @@ a scraped knee, the flu, and an antibiotic-resistant superbug in her stitches.
 Made for middle schoolers to learn how the immune system works and why antibiotics only work on bacteria.
 
 ## Play
-Open `index.html` in any modern browser. No install or build step.
+**Play online:** https://nave-neptunus.github.io/bit8_game_HighSchoolIO/
+
+Or open `index.html` in any modern browser. No install or build step.
 
 - **Move:** arrow keys or WASD
 - **A (talk, confirm):** Z, Enter or Space

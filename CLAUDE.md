@@ -44,7 +44,7 @@ title -> Continue, start menu, journal, 4-enemy layout, lose -> lymph node, phar
 Ideas for later:
 1. A hand playtest by a real middle schooler for pacing (encounter rate is 13% per grass step after 4 steps).
 2. The Press Start 2P font loads from Google Fonts; falls back to monospace offline.
-3. Publish a play link for judges (GitHub Pages).
+3. Play link (GitHub Pages, deploys from main): https://nave-neptunus.github.io/bit8_game_HighSchoolIO/
 
 ## Science notes (keep claims sourced)
 AMR deaths 1.27M direct / 4.95M associated in 2019 (IHME/Lancet GRAM). Antibiotics don't work on viruses (CDC).
