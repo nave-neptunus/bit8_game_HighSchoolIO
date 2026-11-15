@@ -6,53 +6,79 @@
 <title>Immune Response</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
-  html, body { margin: 0; overflow-x: hidden; background: #14101c; color: #1b1428; font-family: "Press Start 2P", monospace; }
-  #wrap { margin: 8px auto; max-width: 100%; }
-  #screen { display: block; image-rendering: pixelated; border: 3px solid #1b1428; box-sizing: content-box; background: #000; }
-  #box { background: #fdf6e3; border: 3px solid #1b1428; margin-top: 6px; padding: 10px 12px; min-height: 96px; font-size: 12px; line-height: 1.7; }
+  :root { --ink: #1b1428; --paper: #fdf6e3; --paper2: #f3e9cf; --shell: #3a2f52; --shell2: #2a2238; --accent: #2fb6a8; --gold: #f2c94c; --muted: #6a5a7a; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; overflow-x: hidden; min-height: 100%; }
+  body { background: radial-gradient(ellipse at 50% 0%, #3b2d58 0%, #1a1426 55%, #0f0b17 100%) fixed; color: var(--ink); font-family: "Press Start 2P", monospace; }
+  #wrap { margin: 14px auto 10px; max-width: 100%; }
+  .shell { background: linear-gradient(180deg, var(--shell) 0%, var(--shell2) 100%); border-radius: 14px 14px 34px 14px; padding: 14px 14px 12px;
+    box-shadow: 0 0 0 3px #120d1c, 0 18px 40px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.08); }
+  .bezel { background: #120d1c; border-radius: 8px; padding: 10px; box-shadow: inset 0 0 0 2px #4a3d66; position: relative; }
+  .bezel::before { content: ""; position: absolute; left: 12px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 50%; background: #e0524f; box-shadow: 0 0 6px #e0524f; }
+  #screen { display: block; margin: 0 auto; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; border-radius: 2px; }
+  .brand { display: flex; justify-content: space-between; align-items: baseline; color: #b9a9d6; font-size: 9px; letter-spacing: 1px; margin: 9px 4px 0; }
+  .brand b { color: var(--accent); font-weight: normal; } .brand i { font-style: normal; color: var(--gold); }
+  #box { position: relative; background: var(--paper); margin-top: 10px; padding: 12px 14px 10px; min-height: 104px; font-size: 12px; line-height: 1.75;
+    border: 3px solid var(--ink); border-radius: 6px; box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 5px #c9b98f, 0 4px 0 #120d1c; }
   #boxText { min-height: 22px; white-space: pre-wrap; cursor: pointer; }
-  #boxText.more::after { content: " \25BC"; animation: blink 0.8s steps(1) infinite; }
+  #boxText.more::after { content: " \25BC"; color: #b5303a; animation: blink 0.8s steps(1) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
-  #boxMenu { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+  #boxMenu { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-top: 6px; max-height: 230px; overflow-y: auto; }
   #boxMenu.one { grid-template-columns: 1fr; }
-  #boxMenu button { font: inherit; font-size: 11px; text-align: left; padding: 8px 10px; background: #fff; border: 2px solid #1b1428; cursor: pointer; display: flex; gap: 8px; align-items: center; }
-  #boxMenu button .r { margin-left: auto; color: #6a5a7a; }
-  #boxMenu button.focus, #boxMenu button:hover:not([disabled]) { background: #ffe9a8; }
-  #boxMenu button[disabled] { opacity: 0.4; cursor: default; }
-  #boxMenu button.back { background: #eee; }
+  #boxMenu button { font: inherit; font-size: 11px; color: var(--ink); text-align: left; padding: 7px 8px 7px 22px; background: transparent; border: 0; border-radius: 4px;
+    cursor: pointer; display: flex; gap: 8px; align-items: center; position: relative; }
+  #boxMenu button::before { content: "\25B6"; position: absolute; left: 6px; font-size: 9px; color: #b5303a; opacity: 0; }
+  #boxMenu button.focus, #boxMenu button:hover:not([disabled]) { background: var(--paper2); }
+  #boxMenu button.focus::before { opacity: 1; animation: nudge .6s steps(2) infinite; }
+  @keyframes nudge { 50% { transform: translateX(2px); } }
+  #boxMenu button .r { margin-left: auto; color: var(--muted); font-size: 10px; text-align: right; }
+  #boxMenu button[disabled] { opacity: 0.35; cursor: default; }
+  #boxMenu button.back { color: var(--muted); }
   #boxMenu button.dead { opacity: 0.5; }
-  #boxMenu button.act { background: #e3f5e8; }
-  #boxMenu { max-height: 220px; overflow-y: auto; }
-  .tag { font-size: 9px; padding: 2px 4px; border: 1px solid currentColor; }
-  .tag.strong { color: #1f8f3a; } .tag.ok { color: #6a5a7a; } .tag.weak { color: #b5303a; } .tag.sup { color: #2a6fb5; }
-  #boxHint { margin-top: 6px; font-size: 10px; color: #6a5a7a; min-height: 14px; }
-  #pad { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; user-select: none; touch-action: none; }
-  .dpad { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(3, 48px); }
-  .dpad button, .ab button { font: inherit; font-size: 14px; background: #3a3045; color: #fff; border: 2px solid #1b1428; }
-  .ab { display: flex; gap: 14px; }
-  .ab button { width: 64px; height: 64px; border-radius: 50%; background: #b5303a; }
-  #btnB { background: #6a5a7a; }
-  #keys { color: #8a7aa0; font-size: 9px; text-align: center; margin: 8px 0 16px; line-height: 1.8; }
+  #boxMenu button.act { color: #1f8f3a; }
+  .tag { font-size: 8px; padding: 2px 4px; border: 1px solid currentColor; border-radius: 3px; }
+  .tag.strong { color: #1f8f3a; background: #e3f5e8; } .tag.ok { color: var(--muted); } .tag.weak { color: #b5303a; } .tag.sup { color: #2a6fb5; }
+  #boxHint { margin-top: 6px; padding-top: 6px; border-top: 2px dotted #d8ccae; font-size: 10px; color: var(--muted); min-height: 14px; }
+  #boxHint:empty { border-top: 0; padding-top: 0; }
+  #pad { display: flex; justify-content: space-between; align-items: center; margin: 14px 6px 4px; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(3, 46px); filter: drop-shadow(0 3px 0 #0c0913); }
+  .dpad button { font: inherit; font-size: 12px; background: #241c33; color: #8a7aa0; border: 0; }
+  .dpad .c { background: #241c33; }
+  .dpad [data-dir=up] { border-radius: 8px 8px 0 0; } .dpad [data-dir=down] { border-radius: 0 0 8px 8px; }
+  .dpad [data-dir=left] { border-radius: 8px 0 0 8px; } .dpad [data-dir=right] { border-radius: 0 8px 8px 0; }
+  .dpad button:active { background: #3a2f52; color: #fff; }
+  .ab { display: flex; gap: 16px; transform: rotate(-18deg); }
+  .ab button { font: inherit; font-size: 14px; width: 62px; height: 62px; border-radius: 50%; border: 0; color: #fff; background: #b5303a; box-shadow: 0 4px 0 #6e1a22; }
+  .ab button:active { transform: translateY(3px); box-shadow: 0 1px 0 #6e1a22; }
+  #btnB { background: #6a5a7a; box-shadow: 0 4px 0 #3a3045; margin-top: 26px; }
+  #keys { color: #8a7aa0; font-size: 9px; text-align: center; margin: 12px 0 18px; line-height: 2; }
+  #keys kbd { font: inherit; color: #d6cde6; background: #241c33; border-radius: 3px; padding: 2px 5px; }
+  @media (hover: hover) and (pointer: fine) { #pad { display: none; } }
+  @media (max-width: 520px) { #wrap { margin-top: 6px; } .shell { padding: 8px; border-radius: 10px 10px 24px 10px; } .bezel { padding: 6px; } .bezel::before { display: none; } #box { font-size: 11px; } }
 </style>
 </head>
 <body>
 <div id="wrap">
-  <canvas id="screen"></canvas>
+  <div class="shell">
+  <div class="bezel"><canvas id="screen"></canvas></div>
+  <div class="brand"><span><b>IMMUNE</b> <i>RESPONSE</i></span><span>VITAL QUEST</span></div>
   <div id="box"><div id="boxText"></div><div id="boxMenu"></div><div id="boxHint"></div></div>
   <div id="pad">
     <div class="dpad">
       <span></span><button data-dir="up">&#9650;</button><span></span>
-      <button data-dir="left">&#9664;</button><span></span><button data-dir="right">&#9654;</button>
+      <button data-dir="left">&#9664;</button><span class="c"></span><button data-dir="right">&#9654;</button>
       <span></span><button data-dir="down">&#9660;</button><span></span>
     </div>
     <div class="ab"><button id="btnB">B</button><button id="btnA">A</button></div>
   </div>
-  <div id="keys">Arrows/WASD move &middot; Z/Enter = A (talk, confirm) &middot; X/Esc = B (back, menu)</div>
+  </div>
+  <div id="keys"><kbd>Arrows</kbd>/<kbd>WASD</kbd> move &nbsp; <kbd>Z</kbd> A: talk, confirm &nbsp; <kbd>X</kbd> B: back, menu</div>
 </div>
 <script src="engine.js"></script>
 <script src="world.js"></script>
 <script src="audio.js"></script>
 <script src="sprites.js"></script>
+<script src="assets/sprites/manifest.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

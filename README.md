@@ -22,6 +22,7 @@ Or open `index.html` in any modern browser. No install or build step.
 - A choice in Area 2 that changes the final boss
 - Original chiptune music and sound effects
 - Saves in your browser so you can come back later
+- Level Select on the title screen to jump straight to any area
 
 ## Tests
 ```bash

@@ -5,12 +5,13 @@ const cv = document.getElementById("screen"), ctx = cv.getContext("2d");
 const boxText = document.getElementById("boxText"), boxMenu = document.getElementById("boxMenu"), boxHint = document.getElementById("boxHint");
 let S = 3;
 function resize() {
-  const avail = Math.min(window.innerWidth - 16, 960);
+  const chrome = window.innerWidth <= 520 ? 28 : 48;   // shell + bezel padding (index.html)
+  const avail = Math.min(window.innerWidth - 12 - chrome, 960);
   S = Math.max(2, Math.min(4, Math.floor(avail / LW)));
   if (avail / LW < 2) S = avail / LW;
   cv.width = Math.round(LW * S); cv.height = Math.round(LH * S);
   cv.style.width = cv.width + "px"; cv.style.height = cv.height + "px";
-  document.getElementById("wrap").style.width = cv.width + "px";
+  document.getElementById("wrap").style.width = (cv.width + chrome) + "px";
   ctx.imageSmoothingEnabled = false;
 }
 window.addEventListener("resize", resize); resize();
@@ -25,6 +26,36 @@ const PAL = {
   3: { floor: "#d6e6ee", floorDot: "#bcd2de", floorDot2: "#eef6fa", path: "#eef3f6", pathDot: "#cfdbe2", grass: "#9b6bd6", grassDk: "#6a3fa3", wall: "#9fb3c4", wallDk: "#6d8396", wallHi: "#d3e0ea", wallNuc: "#4a5d6e", water: "#b5303a", waterHi: "#d9555c", waterCell: "#e8737a", bg: "#e3eef4", ground: "#bcd2de", decor: "stitch" },
 };
 const TILES = { 1: SPR.makeTiles(PAL[1]), 2: SPR.makeTiles(PAL[2]), 3: SPR.makeTiles(PAL[3]) };
+// sprites drawn from PNGs (assets/sprites/, see SPRITES.md) replace the code-drawn ones as they load.
+// lw/lh = size on the game's 240x160 grid, so higher-resolution PNGs draw at the same size but sharper.
+const sw = c => c.lw || c.width, sh = c => c.lh || c.height;
+function loadSprites() {
+  const CELLS = { neutrophil: "Neutrophil", macrophage: "Macrophage", nk: "NK Cell", killer_t: "Killer T Cell", b: "B Cell" };
+  const UI = { item: ["ITEM", 16], bubble: ["BUBBLE", 9], badge: ["BADGE", 7], sparkle: ["SPARKLE", 7] };
+  for (const f of window.SPRITE_FILES || []) {
+    const name = f.replace(/\.png$/i, ""), im = new Image();
+    im.onload = () => {
+      let m;
+      const size = (w, h) => { im.lw = w; im.lh = h || w; };
+      if ((m = /^cell_(.+)$/.exec(name)) && CELLS[m[1]]) { size(24); CRE[CELLS[m[1]]] = im; }
+      else if ((m = /^germ_(.+)$/.exec(name)) && CRE[m[1]]) { size(24); CRE[m[1]] = im; }
+      else if ((m = /^boss_(.+)$/.exec(name)) && CRE[m[1]]) { size(32); CRE[m[1]] = im; }
+      else if ((m = /^person_(.+)$/.exec(name)) && PEOPLE[m[1]]) {
+        const fw = im.width / 4, fh = im.height / 4, sheet = {};
+        ["down", "up", "left", "right"].forEach((d, r) => sheet[d] = [0, 1, 2, 3].map(c => {
+          const cvs = document.createElement("canvas"); cvs.width = fw; cvs.height = fh;
+          cvs.getContext("2d").drawImage(im, c * fw, r * fh, fw, fh, 0, 0, fw, fh); cvs.lw = 16; cvs.lh = 16; return cvs; }));
+        PEOPLE[m[1]] = sheet;
+      }
+      else if ((m = /^tile_water_([123])_([ab])$/.exec(name))) { size(16); TILES[m[1]].water[m[2] === "a" ? 0 : 1] = im; }
+      else if ((m = /^tile_([a-z]+)_([123])$/.exec(name)) && TILES[m[2]][m[1]]) { size(16); TILES[m[2]][m[1]] = im; }
+      else if ((m = /^ui_(.+)$/.exec(name)) && UI[m[1]]) { size(UI[m[1]][1]); SPR[UI[m[1]][0]] = im; }
+      else console.warn("Unknown sprite file (check the name in SPRITES.md):", f);
+    };
+    im.src = "assets/sprites/" + f;
+  }
+}
+loadSprites();
 const JOURNAL = WORLD.JOURNAL, JINFO = Object.fromEntries(JOURNAL.map(j => [j[0], j]));
 const SOLID_T = new Set(["#", "~", "o", "G"]);
 const DIRV = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
@@ -505,8 +536,30 @@ function titleMenu() {
     if (!save) return newGame();
     menu("Start over? Your old save is replaced the next time the game saves.", [{ label: "YES, START OVER", fn: newGame }, { label: "NO", fn: titleMenu }]);
   } });
+  items.push({ label: "LEVEL SELECT", hint: "Jump straight to any area with a ready-made team.", fn: levelSelect });
   items.push({ label: SND.isOn() ? "SOUND: ON" : "SOUND: OFF", fn: () => { SND.toggle(); titleMenu(); }, hint: "Turn music and sound effects on or off." });
   menu("Arrows/WASD move. Z = A (talk, confirm). X = B (back, menu).", items, { cols: 1 });
+}
+const LEVEL_INFO = {
+  1: "Maya scraped her knee. Team: Neutrophil + Macrophage. Learn type matchups and Immune Memory.",
+  2: "Maya has the flu. Team adds NK Cell + Killer T Cell. Watch out for the pharmacist's offer!",
+  3: "Maya's stitches are infected with a superbug. Full team of 5. Culture, clean, then the targeted drug.",
+};
+const levelStartLv = n => n === 1 ? TUNE.startLv : TUNE.joinLv[n];
+function levelSelect(focus) {
+  G.view = null;
+  menu("LEVEL SELECT: pick an area to play", [1, 2, 3].map(n => ({
+    html: `AREA ${n}: ${AREAS[n].name}<span class=r>${AREAS[n].sub} &middot; team Lv ${levelStartLv(n)}</span>`,
+    hint: LEVEL_INFO[n], fn: () => {
+      if (!readSave()) return startLevel(n);
+      menu(`Play AREA ${n}? Your old save is replaced the next time the game saves.`, [{ label: "YES, PLAY IT", fn: () => startLevel(n) }, { label: "NO", fn: () => levelSelect(n - 1) }]);
+    } })), { cols: 1, back: titleMenu, focus });
+}
+function startLevel(n) {
+  newGame();
+  const lv = levelStartLv(n);
+  for (let i = 1; i <= n; i++) { if (i < n) G.beaten[i] = true; for (const name of AREAS[i].join) G.roster.push(makeCell(name, lv)); }
+  G.fade = { t: 0, mid: () => startArea(n) };
 }
 function ending() {
   B = null; G.mode = "end"; G.cleared = true; G.credT = 0; SND.music("ending"); writeSave();
@@ -526,7 +579,7 @@ function ending() {
 }
 
 // ---------- drawing helpers ----------
-function img(c, x, y, sc = 1, alpha = 1) { ctx.globalAlpha = alpha; ctx.drawImage(c, Math.round(x * S), Math.round(y * S), Math.round(c.width * sc * S), Math.round(c.height * sc * S)); ctx.globalAlpha = 1; }
+function img(c, x, y, sc = 1, alpha = 1) { ctx.globalAlpha = alpha; ctx.drawImage(c, Math.round(x * S), Math.round(y * S), Math.round(sw(c) * sc * S), Math.round(sh(c) * sc * S)); ctx.globalAlpha = 1; }
 function rect(x, y, w, h, col) { ctx.fillStyle = col; ctx.fillRect(Math.round(x * S), Math.round(y * S), Math.round(w * S), Math.round(h * S)); }
 function text(s, x, y, size = 6, col = "#1b1428", align = "left") {
   ctx.font = `${Math.round(size * S)}px "Press Start 2P", monospace`; ctx.fillStyle = col; ctx.textAlign = align; ctx.textBaseline = "top";
@@ -561,7 +614,8 @@ function drawWorld() {
     if (it.hero) {
       const fr = p.moving && p.t < 5 ? (p.frame % 2 ? 1 : 3) : 0;   // step pose for the first half of each step
       img(PEOPLE.hero[p.dir][fr], px - camX, py - camY - 3);
-      if (!p.moving && tileAt(p.x, p.y) === ",") ctx.drawImage(T.grass, 0, 10, 16, 6, Math.round((px - camX) * S), Math.round((py - camY + 10) * S), Math.round(16 * S), Math.round(6 * S));
+      const gk = T.grass.width / sw(T.grass);
+      if (!p.moving && tileAt(p.x, p.y) === ",") ctx.drawImage(T.grass, 0, 10 * gk, 16 * gk, 6 * gk, Math.round((px - camX) * S), Math.round((py - camY + 10) * S), Math.round(16 * S), Math.round(6 * S));
       continue;
     }
     const e = it.e;
@@ -573,17 +627,18 @@ function drawWorld() {
     if (e.type === "npc") img(PEOPLE[e.who][face][0], ex, ey - 3);
     else if (e.type === "sign") img(T.sign, ex, ey);
     else if (e.type === "item" && !e.hidden) img(SPR.ITEM, ex, ey + Math.round(Math.sin(G.tick / 15)));
+    else if (e.type === "item" && e.hidden && G.tick % 100 < 12 && SPR.SPARKLE) img(SPR.SPARKLE, ex + 5, ey + 5);
     else if (e.type === "item" && e.hidden && G.tick % 100 < 12) { const s = G.tick % 100 < 6 ? 1 : 2; rect(ex + 8, ey + 8 - s, 1, s * 2 + 1, "#ffffff"); rect(ex + 8 - s, ey + 8, s * 2 + 1, 1, "#ffffff"); }
     else if (e.type === "captain") {
       const c = CRE[e.sprite], done = G.flags["cap:" + e.id];
       const bob = done ? 0 : Math.round(Math.sin((G.tick + e.x * 7) / 10));
       img(c, ex - 4, ey - 9 + bob, 1, done ? 0.5 : 1);
-      if (!done) img(SPR.BADGE, ex + 5, ey - 15 + bob);
+      if (!done) img(SPR.BADGE, ex + 8 - sw(SPR.BADGE) / 2, ey - 10 - sh(SPR.BADGE) + bob);
       if (G.approach && G.approach.e === e && G.approach.t < 40) img(SPR.BUBBLE, ex + 3, ey - 26);
     } else if (e.type === "boss") {
       const c = CRE[AREAS[G.area].boss.team[0]];
       const bob = Math.round(Math.sin(G.tick / 10));
-      img(c, ex - (c.width - 16) / 2, ey - (c.height - 16) + bob);
+      img(c, ex - (sw(c) - 16) / 2, ey - (sh(c) - 16) + bob);
     }
   }
   // area banner
@@ -600,7 +655,7 @@ function drawWorld() {
 function drawView() {   // big picture for the team / journal screens
   const v = G.view, c = CRE[v.key]; if (!c) return;
   panel(LW - 92, 6, 86, 86, "#2a2238");
-  const sc = Math.min(3, 64 / c.width); img(c, LW - 49 - c.width * sc / 2, 46 - c.height * sc / 2 + Math.round(Math.sin(G.tick / 12) * 2), sc);
+  const sc = Math.min(3, 64 / sw(c)); img(c, LW - 49 - sw(c) * sc / 2, 46 - sh(c) * sc / 2 + Math.round(Math.sin(G.tick / 12) * 2), sc);
   if (v.kind === "cell") text(`Lv ${v.lv}`, LW - 49, 82, 5, "#f2c94c", "center");
 }
 
@@ -608,8 +663,8 @@ function drawView() {   // big picture for the team / journal screens
 function enemyLayout(list) {
   const n = list.length;
   return list.map((e, i) => {
-    const c = CRE[e.sprite], big = c.width > 24, sc = n <= 1 ? (big ? 1.8 : 1.9) : n === 2 ? (big ? 1.5 : 1.5) : (big ? 1.1 : 1.05);
-    const slot = 124 / n, cx = 112 + slot * i + slot / 2, w = c.width * sc, h = c.height * sc;
+    const c = CRE[e.sprite], big = sw(c) > 24, sc = n <= 1 ? (big ? 1.8 : 1.9) : n === 2 ? (big ? 1.5 : 1.5) : (big ? 1.1 : 1.05);
+    const slot = 124 / n, cx = 112 + slot * i + slot / 2, w = sw(c) * sc, h = sh(c) * sc;
     const cy = 78 - h / 2 - (n >= 3 && i % 2 ? 6 : 0);
     return { e, c, sc, w, h, cx, cy };
   });
@@ -662,7 +717,7 @@ function drawBattle() {
   let sx = 26 - (1 - intro) * 100 + (shake && shake.t > 6 && shake.t < 22 ? Math.round(Math.sin(shake.t * 1.5) * 3) : 0);
   if (atk && atk.t < 10 && atk.mt !== "Signal") sx += Math.sin(atk.t / 10 * Math.PI) * 8;
   const swap = BV.anim.find(a => a.fx === "swap"), sAlpha = swap ? Math.min(1, swap.t / 12) : 1;
-  if (B.available(c) || c.hp <= 0) img(cc, sx, 128 - cc.height * 2.2, 2.2, shownHP(c) <= 0 ? 0.3 : sAlpha);
+  if (B.available(c) || c.hp <= 0) img(cc, sx, 128 - sh(cc) * 2.2, 2.2, shownHP(c) <= 0 ? 0.3 : sAlpha);
   if (heal && heal.t < 20) { ctx.globalAlpha = 0.3 * (1 - heal.t / 20); rect(0, 0, LW, LH, "#7cf0a0"); ctx.globalAlpha = 1; }
   // move effects
   for (const a of BV.anim) {

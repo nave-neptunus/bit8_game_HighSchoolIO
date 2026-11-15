@@ -14,7 +14,8 @@ Controls: arrows/WASD move, Z/Enter = A (talk, confirm), X/Esc = B (back, start 
 - `sprites.js`: 8-bit art. People are hand-drawn 16x16 rows (palette-swapped); cells/germs are procedural blobs; tiles per area palette.
 - `audio.js`: WebAudio chiptune songs (title, 3 areas, battle, boss, victory, level up, ending) and sound effects. Original tunes written as note strings.
 - `game.js`: overworld, captains' line of sight, start menu (team/bag/journal/save/sound), save/continue in localStorage, battle UI and effects, title, ending + credits. `window.__G.debug` has test hooks (`run(n)` steps the game loop when the tab is hidden).
-- `index.html`: page + CSS + touch controls.
+- `index.html`: page (handheld-style frame, retro text window) + touch controls (shown only on touch devices).
+- `SPRITES.md`: every sprite with file name, size, description and colors, for redrawing as PNGs. PNGs go in `assets/sprites/`; run `node make_manifest.js` after adding any. `loadSprites()` in game.js swaps them in over the code-drawn art (`lw`/`lh` = size on the 240x160 grid, so hi-res PNGs draw sharper at the same size).
 - `test_balance.js`: `node test_balance.js` runs 2,000 fights per case at the expected levels with a "decent" and a random player, and checks win-rate targets.
 - `test_world.js`: `node test_world.js` checks every map: shape, defined characters, captains' sight lines, and that each area can be finished in order.
 - `sim.py`: original Python balance sim (reference only). `smoke.py`, `shot.py`, `preview.html`: Playwright smoke test and sprite preview (`pip install playwright && playwright install chromium`).
@@ -28,6 +29,7 @@ a swollen gate that opens once every captain in the area is beaten, the boss in 
 - Whole team gets XP (fainted cells half); captains give 1.5x. Levels 1-15, one new move per cell (Neutrophil 6, Macrophage 7, NK 9, Killer T 10, B Cell 12).
 - Enemies scale to each area's par level (TUNE.areaPar 5/8/11). Wild wins give Immune Memory (+5% boss damage, max 3).
 - Losing sends you back to the lymph node healed (no game over). Autosaves on area entry and after captain/boss wins.
+- Title: Continue, New Game, Level Select (jump to Area 1/2/3 with every earlier cell at that area's start level: 3 / 6 / 9), Sound.
 
 ## Balance (node test_balance.js, current TUNE)
 | Fight | Decent player | Random player |
