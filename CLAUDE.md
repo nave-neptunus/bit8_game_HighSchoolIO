@@ -1,51 +1,53 @@
 # Immune Response (hackathon game, "Project Vital Quest" healthcare game track)
 
-Pokemon-style game for middle schoolers: walk a pixel-art kid through 3 areas inside a patient (Maya),
-wild germs jump out of "tall grass," and battles are turn-based with immune cells as your team.
-Theme: immune system + antibiotic resistance. Design doc: https://claude.ai/artifact/2kx3hGx8ydoXgYH7JG48rp
-(the doc describes the original, harder tuning; this code uses the easier middle-school tuning in TUNE).
+Classic handheld-style monster RPG for middle schoolers: walk a shrunk-down kid through 3 areas inside a patient (Maya),
+wild germs jump out of "tall grass", germ captains spot you and challenge you, and turn-based battles use immune cells as your team.
+Theme: immune system + antibiotic resistance. All names, art, music and story are original.
 
 ## Run
-Open `index.html` in a browser (no build step). Or `python3 -m http.server` and visit localhost:8000.
-Controls: arrows/WASD move, Z/Enter = A, X/Esc = B (back / team screen). On-screen D-pad + A/B for touch.
+Open `index.html` in a browser (no build step), or `python3 -m http.server` and visit localhost:8000.
+Controls: arrows/WASD move, Z/Enter = A (talk, confirm), X/Esc = B (back, start menu). On-screen D-pad + A/B for touch.
 
 ## Files
-- `engine.js`: battle rules + all stats (TUNE block at top), enemy factories, scripted test players. Shared by game and tests.
-- `sprites.js`: 8-bit art. People are hand-drawn 16x16 pixel rows (palette-swapped for NPCs); cells/germs are procedural blobs; tiles per area palette.
-- `game.js`: overworld (maps, NPCs, grass encounters, lymph node heal, gates/exits), dialog/menu text box, battle UI, title/ending. `window.__G.debug` has test hooks.
+- `engine.js`: battle rules, all stats (TUNE block at top), levels/XP (`makeCell`, `gainXP`), enemy factories scaled per area (`spawn`, `spawnWild`), scripted test players. Shared by game and tests. Each battle log message carries a `snap` of HP/body so the UI bars move in step with the text.
+- `world.js`: the 3 maps (legend at top), NPCs, signs, items, germ captains, boss data, story text, Germ Journal facts.
+- `sprites.js`: 8-bit art. People are hand-drawn 16x16 rows (palette-swapped); cells/germs are procedural blobs; tiles per area palette.
+- `audio.js`: WebAudio chiptune songs (title, 3 areas, battle, boss, victory, level up, ending) and sound effects. Original tunes written as note strings.
+- `game.js`: overworld, captains' line of sight, start menu (team/bag/journal/save/sound), save/continue in localStorage, battle UI and effects, title, ending + credits. `window.__G.debug` has test hooks (`run(n)` steps the game loop when the tab is hidden).
 - `index.html`: page + CSS + touch controls.
-- `test_balance.js`: `node test_balance.js` runs 2,000 fights per case with a "decent" scripted player and a random-button player.
-- `sim.py`: original Python balance sim (harder tuning, from the design doc). Reference only.
-- `smoke.py`, `shot.py`, `preview.html`: headless-Chrome smoke test and sprite-sheet preview (Playwright).
+- `test_balance.js`: `node test_balance.js` runs 2,000 fights per case at the expected levels with a "decent" and a random player, and checks win-rate targets.
+- `test_world.js`: `node test_world.js` checks every map: shape, defined characters, captains' sight lines, and that each area can be finished in order.
+- `sim.py`: original Python balance sim (reference only). `smoke.py`, `shot.py`, `preview.html`: Playwright smoke test and sprite preview (`pip install playwright && playwright install chromium`).
 
 ## Game flow
-Area 1 The Scrape (Neutrophil, Macrophage; boss Toxin Brewer) -> Area 2 The Cough (Macrophage, NK, Killer T;
-pharmacist offers antibiotics, a trap: they do nothing to viruses; boss Virus Factory) -> Area 3 The Superbug
-(Neutrophil, Macrophage, B Cell; Lab Culture -> Debridement -> Targeted Antibiotic; boss Superbug Colony gets
-+15 HP and +1 resistance per antibiotic wasted in Area 2). Wild wins give Immune Memory (+5% boss damage, max 3).
-Losing sends you back to the lymph node healed (no game over).
+Each area: clinic hub (lymph node heals + refills the bag, NPCs, sign), a route with grass, 2-3 germ captains, one visible and one hidden item,
+a swollen gate that opens once every captain in the area is beaten, the boss in front of the exit.
+- Area 1 The Scrape: Neutrophil + Macrophage (start Lv 3). Captains: Staph, Strep. Boss Toxin Brewer.
+- Area 2 The Cough: NK Cell + Killer T Cell join. Pharmacist offers antibiotics (a trap: they do nothing to viruses). Captains: Flu, Cold, Hijack. Boss Virus Factory.
+- Area 3 The Superbug: B Cell joins. Lab Culture -> Debridement -> Targeted Antibiotic. Captains: MRSA, Slime, Colony Guard. Boss Superbug Colony gets +15 HP and +1 resistance per antibiotic wasted in Area 2. Leftover pharmacy antibiotics become Old Antibiotics.
+- Whole team gets XP (fainted cells half); captains give 1.5x. Levels 1-15, one new move per cell (Neutrophil 6, Macrophage 7, NK 9, Killer T 10, B Cell 12).
+- Enemies scale to each area's par level (TUNE.areaPar 5/8/11). Wild wins give Immune Memory (+5% boss damage, max 3).
+- Losing sends you back to the lymph node healed (no game over). Autosaves on area entry and after captain/boss wins.
 
 ## Balance (node test_balance.js, current TUNE)
-| Boss | Decent player | Random player |
+| Fight | Decent player | Random player |
 | --- | --- | --- |
-| Area 1 | 100% | 98% |
-| Area 2 | 100% | 50% |
-| Area 3 (0 / 2 antibiotics wasted) | 100% / 99% | 44% / 27% |
+| Captains (start level + 1) | 100% | 47-100% |
+| Area 1 boss, par / 2 under | 100% / 100% | 98% / 97% |
+| Area 2 boss, par / 2 under | 100% / 100% | 35% / 26% |
+| Area 3 boss, par (0 / 1 / 2 antibiotics wasted) | 100% / 99.9% / 97.8% | 50% / 40% / 31% |
 
 ## Status
-Done: engine, kid tuning, all sprites, 3 maps, NPC dialog, pharmacist choice, encounters, battle UI with
-STRONG!/weak hints, ending. Smoke test passes (title -> intro -> walk -> wild battle, no console errors).
+Done and playtested end to end in the browser (scripted run through all 3 areas, all 8 captains, all bosses, ending, credits,
+title -> Continue, start menu, journal, 4-enemy layout, lose -> lymph node, pharmacist trap, 375px phone width). No console errors.
 
-Not yet verified / next steps:
-1. Full playthrough of all 3 areas by hand (boss fights, gate opening, area exits, ending, play again).
-2. Check the battle screen with 3-4 enemies on screen (labels may overlap; status tags stack under labels).
-3. Player walk animation frame logic in drawWorld is convoluted; simplify.
-4. The Press Start 2P font loads from Google Fonts; falls back to monospace offline.
-5. Optional: sound effects, save to localStorage, publish/share link for judges.
-6. Update the design doc with the overworld + kid tuning.
+Ideas for later:
+1. A hand playtest by a real middle schooler for pacing (encounter rate is 13% per grass step after 4 steps).
+2. The Press Start 2P font loads from Google Fonts; falls back to monospace offline.
+3. Publish a play link for judges (GitHub Pages).
 
 ## Science notes (keep claims sourced)
 AMR deaths 1.27M direct / 4.95M associated in 2019 (IHME/Lancet GRAM). Antibiotics don't work on viruses (CDC).
-NK "missing self" vs MHC-I downregulation (PMC2700287). Pus is mostly dead neutrophils. Biofilms resist drugs
-and immune cells. Simplifications: macrophage stands in for dendritic cells as antigen presenter; resistance is
-made personal to Maya for clarity.
+About 1 in 3 people carry staph in the nose (CDC). Rhinovirus is the most common cause of colds. MRSA spreads in hospitals and by shared towels/equipment (CDC).
+NK "missing self" vs MHC-I downregulation (PMC2700287). Pus is mostly dead neutrophils. Biofilms resist drugs and immune cells.
+Simplifications: macrophage stands in for dendritic cells as antigen presenter; resistance is made personal to Maya for clarity.

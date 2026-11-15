@@ -7,7 +7,15 @@ const TUNE = {            // middle-school tuning; change here, rerun test_balan
   bossL3HP: 100, bossL3Toxin: 6, bossL3Shield: 30, bossL3Regen: 0,
   resistStep: 0.2, resistFloor: 0.4, targetedPower: 50,
   memoryBonus: 0.05, maxRounds: 60, wastedBossHP: 15,
+  // progression
+  startLv: 3, maxLv: 15, hpGrow: 0.07, statGrow: 0.05, xpBase: 10, xpPerLv: 6,
+  areaPar: { 1: 5, 2: 8, 3: 11 },     // level the area's boss is tuned for
+  joinLv: { 2: 6, 3: 9 },             // minimum level for cells that join later
+  kidXP: 0.5, faintedXP: 0.5, wildHP: 1.7, wildXP: 1.3,
 };
+const growth = (lv, k) => 1 + k * (lv - 1);
+const xpToNext = lv => TUNE.xpBase + TUNE.xpPerLv * lv;
+const areaScale = area => growth(TUNE.areaPar[area] || 1, TUNE.statGrow);
 
 const EFF = {
   Engulf:    { Bacterium: 1.5, Virus: 1.0,  Infected: 0.5 },
@@ -22,45 +30,87 @@ const CELL_DEFS = {
   Neutrophil: { hp: 55, atk: 12, df: 8, decay: 3, blurb: "First responder. Fast, but it wears out.", moves: [
     mv("Engulf", "Engulf", 14, INF, { desc: "Swallow a germ." }),
     mv("NET Trap", "Engulf", 11, 2, { aoe: true, selfDmg: 10, desc: "Hit ALL enemies. Costs 10 of its own HP." }),
-    mv("Call for Backup", "Signal", 0, 3, { inflam: 15, desc: "Inflammation +15: all your attacks get stronger." })] },
+    mv("Call for Backup", "Signal", 0, 3, { inflam: 15, desc: "Inflammation +15: all your attacks get stronger." })],
+    learn: [[6, mv("Degranulate", "Engulf", 20, 3, { desc: "Spray germ-killing granules. Strong hit." })]] },
   Macrophage: { hp: 90, atk: 9, df: 12, blurb: "Big eater. Tough, and it cleans up.", moves: [
     mv("Engulf", "Engulf", 14, INF, { desc: "Swallow a germ." }),
     mv("Cytokine Alarm", "Signal", 0, 3, { inflam: 20, desc: "Inflammation +20: all your attacks get stronger." }),
     mv("Present Antigen", "Signal", 0, 1, { present: true, desc: "Show the enemy to T and B cells. They arrive sooner and hit harder." }),
-    mv("Clean Up", "Signal", 0, 3, { bodyHeal: TUNE.cleanUpHeal, desc: "Repair tissue: Body +" + TUNE.cleanUpHeal + "." })] },
+    mv("Clean Up", "Signal", 0, 3, { bodyHeal: TUNE.cleanUpHeal, desc: "Repair tissue: Body +" + TUNE.cleanUpHeal + "." })],
+    learn: [[7, mv("Big Gulp", "Engulf", 24, 2, { desc: "Swallow a germ whole. Huge hit." })]] },
   "NK Cell": { hp: 60, atk: 13, df: 8, blurb: "Hunts cells that are hiding something.", moves: [
     mv("Kill Check", "Cytotoxic", 14, INF, { desc: "Destroy an infected cell." }),
     mv("Perforin Strike", "Cytotoxic", 24, 3, { desc: "Big hit on an infected cell." }),
-    mv("Interferon Signal", "Signal", 0, 2, { inflam: 10, slowVirus: 2, desc: "Warn nearby cells: virus copying stops for 2 rounds." })] },
+    mv("Interferon Signal", "Signal", 0, 2, { inflam: 10, slowVirus: 2, desc: "Warn nearby cells: virus copying stops for 2 rounds." })],
+    learn: [[9, mv("Granule Burst", "Cytotoxic", 13, 2, { aoe: true, desc: "Hit ALL enemies with toxic granules." })]] },
   "Killer T Cell": { hp: 75, atk: 16, df: 10, arrives: TUNE.tCellArrives, blurb: "The specialist. Takes a few rounds to show up.", moves: [
     mv("Targeted Kill", "Cytotoxic", 21, INF, { desc: "Destroy an infected cell." }),
     mv("Perforin & Granzyme", "Cytotoxic", 32, 3, { desc: "Huge hit on an infected cell." }),
-    mv("Clonal Expansion", "Signal", 0, 1, { selfHeal: 30, desc: "Make copies of itself: heal 30 HP." })] },
+    mv("Clonal Expansion", "Signal", 0, 1, { selfHeal: 30, desc: "Make copies of itself: heal 30 HP." })],
+    learn: [[10, mv("Serial Killing", "Cytotoxic", 26, 4, { desc: "Destroy one cell, then move right on to the next." })]] },
   "B Cell": { hp: 65, atk: 14, df: 9, arrives: TUNE.bCellArrives, blurb: "Fires antibodies that tag germs.", moves: [
     mv("Antibody Volley", "Antibody", 16, INF, { desc: "Antibodies hit the target." }),
     mv("Opsonize", "Signal", 0, 3, { opsonize: 3, desc: "Tag a germ: Engulf does double to it for 3 rounds." }),
-    mv("Neutralize Toxin", "Antibody", 22, 3, { stopToxin: true, desc: "Hit and block its toxin for 2 rounds." })] },
+    mv("Neutralize Toxin", "Antibody", 22, 3, { stopToxin: true, desc: "Hit and block its toxin for 2 rounds." })],
+    learn: [[12, mv("Plasma Surge", "Antibody", 14, 2, { aoe: true, desc: "Turn into a plasma cell: antibodies hit ALL enemies." })]] },
 };
 
-function makeCell(name) {
+function cellStats(c) {     // recompute stats from level; keeps damage taken
+  const d = CELL_DEFS[c.name], lost = (c.maxhp || 0) - (c.hp || 0);
+  c.maxhp = Math.round(d.hp * growth(c.lv, TUNE.hpGrow));
+  c.atk = +(d.atk * growth(c.lv, TUNE.statGrow)).toFixed(2);
+  c.df = +(d.df * growth(c.lv, TUNE.statGrow)).toFixed(2);
+  c.hp = Math.max(c.hp <= 0 ? 0 : 1, c.maxhp - lost);
+}
+function makeCell(name, lv) {
   const d = CELL_DEFS[name];
-  return { name, maxhp: d.hp, hp: d.hp, atk: d.atk, df: d.df, decay: d.decay || 0, arrives: d.arrives || 0,
+  const c = { name, lv: lv || 1, xp: 0, maxhp: 0, hp: 0, decay: d.decay || 0, arrives: d.arrives || 0,
     moves: d.moves.map(m => Object.assign({}, m, { left: m.pp })) };
+  for (const [l, m] of d.learn || []) if (c.lv >= l) c.moves.push(Object.assign({}, m, { left: m.pp }));
+  cellStats(c); c.hp = c.maxhp; return c;
+}
+// returns events: [{lv}] and [{learned}] so the UI can announce them
+function gainXP(c, amt) {
+  const ev = [];
+  if (c.lv >= TUNE.maxLv) return ev;
+  c.xp += Math.round(amt);
+  while (c.lv < TUNE.maxLv && c.xp >= xpToNext(c.lv)) {
+    c.xp -= xpToNext(c.lv); c.lv += 1;
+    const oldMax = c.maxhp; cellStats(c); if (c.hp > 0) c.hp = Math.min(c.maxhp, c.hp + (c.maxhp - oldMax));
+    ev.push({ lv: c.lv });
+    for (const [l, m] of CELL_DEFS[c.name].learn || []) if (l === c.lv) { c.moves.push(Object.assign({}, m, { left: m.pp })); ev.push({ learned: m.name }); }
+  }
+  if (c.lv >= TUNE.maxLv) c.xp = 0;
+  return ev;
 }
 
 function E(name, type, hp, atk, df, extra) {
   return Object.assign({ name, type, hp, maxhp: hp, atk, df, age: 0 }, extra || {});
 }
 const ENEMIES = {
-  staph:   () => E("Staph Scout", "Bacterium", 28, 8, 7, { divide: 4, hit: 7, tissue: 6, sprite: "staph" }),
-  brewer:  () => E("Toxin Brewer", "Bacterium", 90, 9, 10, { hit: 9, tissue: 6, clump: 4, toxinEvery: 3, toxin: 10, boss: true, sprite: "brewer" }),
-  virion:  () => E("Flu Virion", "Virus", 22, 6, 6, { infectAfter: TUNE.virionInfectAfter, hit: 6, tissue: 2, sprite: "virion" }),
-  infected:() => E("Hijacked Lung Cell", "Infected", 45, 5, 8, { factory: 3, hit: 4, tissue: 4, hide: true, sprite: "infected" }),
-  factory: () => E("Virus Factory", "Infected", TUNE.factoryHP, 6, 10, { factory: 3, factoryN: 1, hit: 7, tissue: 5, hide: true, boss: true, sprite: "factory" }),
-  rstaph:  () => E("Resistant Staph", "Bacterium", 32, 8, 8, { divide: 4, hit: 7, tissue: 3, sprite: "rstaph" }),
+  staph:   () => E("Staph Scout", "Bacterium", 28, 8, 7, { divide: 4, hit: 7, tissue: 6, xp: 9, sprite: "staph" }),
+  strep:   () => E("Strep Chain", "Bacterium", 24, 7, 6, { divide: 5, hit: 6, tissue: 5, xp: 9, sprite: "strep" }),
+  brewer:  () => E("Toxin Brewer", "Bacterium", 90, 9, 10, { hit: 9, tissue: 6, clump: 4, toxinEvery: 3, toxin: 10, xp: 45, boss: true, sprite: "brewer" }),
+  virion:  () => E("Flu Virion", "Virus", 22, 6, 6, { infectAfter: TUNE.virionInfectAfter, hit: 6, tissue: 2, xp: 10, sprite: "virion" }),
+  rhino:   () => E("Cold Virus", "Virus", 18, 5, 5, { infectAfter: TUNE.virionInfectAfter + 1, hit: 5, tissue: 2, xp: 8, sprite: "rhino" }),
+  infected:() => E("Hijacked Lung Cell", "Infected", 45, 5, 8, { factory: 3, hit: 4, tissue: 4, hide: true, xp: 14, sprite: "infected" }),
+  factory: () => E("Virus Factory", "Infected", TUNE.factoryHP, 6, 10, { factory: 3, factoryN: 1, hit: 7, tissue: 5, hide: true, xp: 70, boss: true, sprite: "factory" }),
+  rstaph:  () => E("Resistant Staph", "Bacterium", 32, 8, 8, { divide: 4, hit: 7, tissue: 3, xp: 13, sprite: "rstaph" }),
+  pseudo:  () => E("Slime Rod", "Bacterium", 30, 8, 9, { biofilmEvery: 3, biofilm: 10, hit: 7, tissue: 3, xp: 15, sprite: "pseudo" }),
   superbug:(res) => E("Superbug Colony", "Bacterium", TUNE.bossL3HP + TUNE.wastedBossHP * Math.max(0, res - 1), 10, 9, { hit: 10, tissue: 5, divide: 4, biofilmEvery: 4, biofilm: 20,
-      shield: TUNE.bossL3Shield, resist: res, toxinEvery: 3, toxin: TUNE.bossL3Toxin, toxinInflam: 20, regen: TUNE.bossL3Regen, boss: true, sprite: "superbug" }),
+      shield: TUNE.bossL3Shield, resist: res, toxinEvery: 3, toxin: TUNE.bossL3Toxin, toxinInflam: 20, regen: TUNE.bossL3Regen, xp: 100, boss: true, sprite: "superbug" }),
 };
+// make an enemy for an area: HP, attack and shields grow with the area's par level (body damage does not)
+function spawn(key, area, arg) {
+  const e = ENEMIES[key](arg), s = areaScale(area);
+  e.maxhp = e.hp = Math.round(e.hp * s); e.atk = +(e.atk * s).toFixed(2);
+  if (e.shield) e.shield = Math.round(e.shield * s);
+  if (e.biofilm) e.biofilm = Math.round(e.biofilm * s);
+  e.key = key; return e;
+}
+function spawnWild(key, area) {   // wild germs are a little beefier so fights last 2-3 rounds
+  const e = spawn(key, area); e.maxhp = e.hp = Math.round(e.hp * TUNE.wildHP); e.xp = Math.round(e.xp * TUNE.wildXP); return e;
+}
 
 const ITEM_INFO = {
   "Rest": "Sleep helps you heal. Body +" + TUNE.restHeal + ", Inflammation -" + TUNE.restCalm + ".",
@@ -70,6 +120,8 @@ const ITEM_INFO = {
   "Targeted Antibiotic": "The right drug for this germ. Big damage, weaker vs. resistance.",
   "Old Antibiotic": "An old drug this germ already resists. Weak.",
   "Debridement": "A doctor cleans the wound: strips the biofilm shield.",
+  "Water Bottle": "Drink up! Fluids help the body. Body +15.",
+  "Healthy Snack": "Food gives your cells energy. Every cell +25 HP.",
 };
 
 function rng(seed) { // small seeded RNG so tests are repeatable
@@ -80,7 +132,7 @@ function rng(seed) { // small seeded RNG so tests are repeatable
 class Battle {
   // cfg: {enemies:[...], cells:[cell objs, shared], bag:{item:n, shared}, wild, level, memory, onAbxWasted, rand}
   constructor(cfg) {
-    Object.assign(this, { enemies: cfg.enemies, cells: cfg.cells, bag: cfg.bag, wild: !!cfg.wild, level: cfg.level,
+    Object.assign(this, { enemies: cfg.enemies, cells: cfg.cells, bag: cfg.bag, wild: !!cfg.wild, level: cfg.level || 1, defeated: [],
       memory: cfg.memory || 0, rand: cfg.rand || Math.random, onAbxWasted: cfg.onAbxWasted || (() => {}) });
     this.body = 100; this.inflam = 0; this.round = 0; this.presented = false; this.cultured = false;
     this.slowVirus = 0; this.stormRounds = 0; this.abxOnVirus = 0; this.over = null;
@@ -131,8 +183,12 @@ class Battle {
   }
 
   // one full round; returns a list of messages for the UI
+  // what the screen should show right after a message (so HP bars move in step with the text)
+  snap() { const hp = new Map(); for (const x of this.cells.concat(this.enemies)) hp.set(x, { hp: x.hp, shield: x.shield || 0 });
+    return { body: this.body, inflam: this.inflam, round: this.round, hp }; }
   step(a) {
     const log = [];
+    if (this.snaps !== false) log.push = (...items) => { for (const it of items) { it.snap = this.snap(); Array.prototype.push.call(log, it); } return log.length; };
     this.round += 1;
     if (!this.available(this.cur())) this.autoSwap(log);
     if (a) this.doPlayer(a, log);
@@ -148,6 +204,9 @@ class Battle {
   }
   waitRound() { return this.step(null); }   // when no cell has arrived yet
 
+  kid(key, xpMul) { const k = spawn(key, this.level); k.xp = Math.round(k.xp * (xpMul || TUNE.kidXP)); return k; }
+  xpEarned() { return this.defeated.reduce((s, e) => s + (e.xp || 0), 0); }
+
   autoSwap(log) {
     const i = this.cells.findIndex(c => this.available(c));
     if (i >= 0 && i !== this.active) { this.active = i; log.push({ t: `Go, ${this.cur().name}!`, fx: "swap" }); }
@@ -159,7 +218,7 @@ class Battle {
     if (a.k === "swap") { this.active = a.i; log.push({ t: `Go, ${this.cur().name}!`, fx: "swap" }); return; }
     if (a.k === "item") return this.useItem(a, log);
     const m = a.m; m.left -= 1;
-    log.push({ t: `${c.name} used ${m.name}!`, fx: "attack", by: c });
+    log.push({ t: `${c.name} used ${m.name}!`, fx: "attack", by: c, mt: m.type, tg: m.type === "Signal" ? (m.opsonize ? [a.e] : []) : m.aoe ? this.enemies.slice() : [a.e] });
     if (m.type === "Signal") {
       if (m.inflam) { this.inflam += m.inflam; log.push({ t: `Inflammation +${m.inflam}. Your attacks hit harder!` }); }
       if (m.present) { this.presented = true; log.push({ t: "T and B cells now know this enemy!" }); }
@@ -173,8 +232,8 @@ class Battle {
     for (const e of targets) {
       const eff = this.effOf(c, m, e);
       const d = this.hit(e, this.dmgOf(c, m, e, 0.9 + 0.2 * this.rand()), log);
-      log.push({ t: `${e.name} took ${d} damage.` + (eff >= 1.5 ? " Super effective!" : eff <= 0.5 ? " Not very effective..." : ""), fx: "hurt", e });
-      if (e.hp <= 0) log.push({ t: `${e.name} was destroyed!`, fx: "faint", e });
+      log.push({ t: `${e.name} took ${d} damage.` + (eff >= 1.5 ? " Super effective!" : eff <= 0.5 ? " Not very effective..." : ""), fx: "hurt", e, d, eff });
+      if (e.hp <= 0) { this.defeated.push(e); log.push({ t: `${e.name} was destroyed!`, fx: "faint", e }); }
     }
     if (m.stopToxin && a.e) a.e.toxinBlock = 2;
     if (m.selfDmg) { c.hp -= m.selfDmg; log.push({ t: `${c.name} gave ${m.selfDmg} HP to cast the net.` }); }
@@ -182,11 +241,13 @@ class Battle {
 
   useItem(a, log) {
     const it = a.it, e = a.e; this.bag[it] -= 1;
-    log.push({ t: `You used ${it}.` });
+    log.push({ t: `You used ${it}.`, fx: /Antibiotic/.test(it) ? "drug" : "item", e });
     if (it === "Rest") { this.body = Math.min(100, this.body + TUNE.restHeal); this.inflam = Math.max(0, this.inflam - TUNE.restCalm); log.push({ t: `Maya rests. Body +${TUNE.restHeal}.`, fx: "heal" }); }
     else if (it === "Fever Reducer") { this.inflam = Math.max(0, this.inflam - TUNE.feverCalm); log.push({ t: "Inflammation went down." }); }
     else if (it === "Lab Culture") { this.cultured = true; log.push({ t: "Lab result: we know which drug works! Targeted Antibiotic unlocked." }); }
     else if (it === "Debridement") { this.enemies.forEach(x => x.shield = 0); log.push({ t: "The wound was cleaned. The biofilm is gone!", fx: "shield" }); }
+    else if (it === "Water Bottle") { this.body = Math.min(100, this.body + 15); log.push({ t: "Maya drinks water. Body +15.", fx: "heal" }); }
+    else if (it === "Healthy Snack") { this.cells.forEach(x => { if (x.hp > 0) x.hp = Math.min(x.maxhp, x.hp + 25); }); log.push({ t: "Your cells got energy! Every cell +25 HP.", fx: "heal" }); }
     else if (/Antibiotic/.test(it)) {
       if (e.type !== "Bacterium") {
         this.abxOnVirus += 1; this.onAbxWasted();
@@ -196,12 +257,12 @@ class Battle {
       }
       const base = it === "Antibiotic" ? 25 : it === "Targeted Antibiotic" ? TUNE.targetedPower : TUNE.targetedPower * 0.3;
       const res = it === "Targeted Antibiotic" ? (e.resist || 0) : 0;
-      let amt = base * Math.max(TUNE.resistFloor, 1 - TUNE.resistStep * res);
+      let amt = base * areaScale(this.level) * Math.max(TUNE.resistFloor, 1 - TUNE.resistStep * res);
       if ((e.shield || 0) > 0) { amt *= 0.25; log.push({ t: "The biofilm blocked most of the drug!" }); }
       amt = Math.round(amt); e.hp -= amt;
-      log.push({ t: `${e.name} took ${amt} damage.`, fx: "hurt", e });
+      log.push({ t: `${e.name} took ${amt} damage.`, fx: "hurt", e, d: amt });
       if (e.resist !== undefined) { e.resist += 1; log.push({ t: `${e.name} is learning to resist (level ${e.resist}).` }); }
-      if (e.hp <= 0) log.push({ t: `${e.name} was destroyed!`, fx: "faint", e });
+      if (e.hp <= 0) { this.defeated.push(e); log.push({ t: `${e.name} was destroyed!`, fx: "faint", e }); }
     }
   }
 
@@ -216,11 +277,11 @@ class Battle {
       if (e.infectAfter && e.age > e.infectAfter + (this.slowVirus ? 1 : 0)) { e.convert = true; continue; }
       if (e.infectAfter && e.age === e.infectAfter + (this.slowVirus ? 1 : 0)) log.push({ t: `${e.name} is about to break into a lung cell!` });
       if (e.factory && e.age % e.factory === 0 && !this.slowVirus) {
-        const n = e.factoryN || 1; for (let i = 0; i < n; i++) spawn.push(ENEMIES.virion());
+        const n = e.factoryN || 1; for (let i = 0; i < n; i++) spawn.push(this.kid("virion"));
         log.push({ t: `${e.name} released ${n === 1 ? "a new virus" : n + " new viruses"}!`, fx: "spawn", e }); continue;
       }
       if (e.divide && e.age % e.divide === 0 && this.enemies.length + spawn.length < 3) {
-        const kid = e.name.startsWith("Resistant") || e.boss ? ENEMIES.rstaph() : ENEMIES.staph();
+        const kid = this.kid(e.key === "rstaph" || e.key === "superbug" ? "rstaph" : e.key === "strep" ? "strep" : "staph");
         kid.hp = Math.round(kid.maxhp * 0.6); spawn.push(kid); log.push({ t: `${e.name} divided in two!`, fx: "spawn", e }); continue;
       }
       if (e.clump && e.age % e.clump === 0) { e.clumped = 2; log.push({ t: `${e.name} clumped together. Harder to hurt!` }); continue; }
@@ -231,10 +292,10 @@ class Battle {
       const c = this.cur();
       if (this.rand() < 0.55 && c.hp > 0 && this.available(c)) {
         const d = Math.max(1, Math.round(e.hit * e.atk / c.df * (0.9 + 0.2 * this.rand())));
-        c.hp -= d; log.push({ t: `${e.name} attacked ${c.name} for ${d}!`, fx: "cellhurt" });
+        c.hp -= d; log.push({ t: `${e.name} attacked ${c.name} for ${d}!`, fx: "cellhurt", e, d });
       } else { this.body -= e.tissue; log.push({ t: `${e.name} damaged tissue. Body -${e.tissue}.`, fx: "body" }); }
     }
-    this.enemies.forEach((e, i) => { if (e.convert) { this.enemies[i] = ENEMIES.infected(); log.push({ t: "The virus broke into a lung cell! It's a Hijacked Lung Cell now.", fx: "spawn" }); } });
+    this.enemies.forEach((e, i) => { if (e.convert) { this.enemies[i] = this.kid("infected", 1); log.push({ t: "The virus broke into a lung cell! It's a Hijacked Lung Cell now.", fx: "spawn" }); } });
     this.enemies = this.enemies.filter(e => e.hp > 0).concat(spawn).slice(0, 4);
     for (const e of this.enemies) for (const k of ["hidden", "opsonized", "toxinBlock", "clumped"]) if ((e[k] || 0) > 0) e[k] -= 1;
   }
@@ -268,6 +329,8 @@ function smartPolicy(b, acts) {
   let p;
   if (b.body < 55 && (p = pick(a => a.k === "move" && a.m.bodyHeal))) return p;
   if (b.body < 45 && (p = pick(a => a.it === "Rest"))) return p;
+  if (b.body < 50 && (p = pick(a => a.it === "Water Bottle"))) return p;
+  if (b.cur().hp < b.cur().maxhp * 0.3 && (p = pick(a => a.it === "Healthy Snack"))) return p;
   if (b.inflam >= 70 && (p = pick(a => a.it === "Fever Reducer"))) return p;
   if (!b.presented && !b.wild && (p = pick(a => a.k === "move" && a.m.present))) return p;
   const boss = b.enemies.find(e => e.boss);
@@ -298,4 +361,4 @@ function smartPolicy(b, acts) {
 }
 function randomPolicy(b, acts) { const a = acts.filter(x => x.k !== "run"); return a[Math.floor(b.rand() * a.length)]; }
 
-if (typeof module !== "undefined") module.exports = { TUNE, EFF, CELL_DEFS, ENEMIES, ITEM_INFO, TYPE_NAME, Battle, makeCell, rng, smartPolicy, randomPolicy };
+if (typeof module !== "undefined") module.exports = { TUNE, EFF, CELL_DEFS, ENEMIES, ITEM_INFO, TYPE_NAME, Battle, makeCell, gainXP, xpToNext, spawn, spawnWild, areaScale, rng, smartPolicy, randomPolicy };

@@ -6,7 +6,7 @@
 <title>Immune Response</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
 <style>
-  html, body { margin: 0; background: #14101c; color: #1b1428; font-family: "Press Start 2P", monospace; }
+  html, body { margin: 0; overflow-x: hidden; background: #14101c; color: #1b1428; font-family: "Press Start 2P", monospace; }
   #wrap { margin: 8px auto; max-width: 100%; }
   #screen { display: block; image-rendering: pixelated; border: 3px solid #1b1428; box-sizing: content-box; background: #000; }
   #box { background: #fdf6e3; border: 3px solid #1b1428; margin-top: 6px; padding: 10px 12px; min-height: 96px; font-size: 12px; line-height: 1.7; }
@@ -21,6 +21,8 @@
   #boxMenu button[disabled] { opacity: 0.4; cursor: default; }
   #boxMenu button.back { background: #eee; }
   #boxMenu button.dead { opacity: 0.5; }
+  #boxMenu button.act { background: #e3f5e8; }
+  #boxMenu { max-height: 220px; overflow-y: auto; }
   .tag { font-size: 9px; padding: 2px 4px; border: 1px solid currentColor; }
   .tag.strong { color: #1f8f3a; } .tag.ok { color: #6a5a7a; } .tag.weak { color: #b5303a; } .tag.sup { color: #2a6fb5; }
   #boxHint { margin-top: 6px; font-size: 10px; color: #6a5a7a; min-height: 14px; }
@@ -45,9 +47,11 @@
     </div>
     <div class="ab"><button id="btnB">B</button><button id="btnA">A</button></div>
   </div>
-  <div id="keys">Arrows/WASD move &middot; Z/Enter = A (talk, confirm) &middot; X/Esc = B (back, team)</div>
+  <div id="keys">Arrows/WASD move &middot; Z/Enter = A (talk, confirm) &middot; X/Esc = B (back, menu)</div>
 </div>
 <script src="engine.js"></script>
+<script src="world.js"></script>
+<script src="audio.js"></script>
 <script src="sprites.js"></script>
 <script src="game.js"></script>
 </body>

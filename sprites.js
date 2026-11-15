@@ -154,6 +154,12 @@ const SPR = (() => {
       ...spikes(16, 10, 2, 6, 2, "#e05a7a", null, 0.2), C(16, 10, 2, "#8d96f2")], { face: { x: 15, y: 17, gap: 5, style: "angry", mouth: "grin" } }),
     superbug: () => makeBlob(32, [EL(16, 19, 15, 12, "#9b6bd6", "#6a3fa3", "#d9c2ff"), C(8, 20, 3, ...STEEL), C(24, 22, 3, ...STEEL), C(13, 26, 3, ...GOLD), C(21, 13, 2, ...STEEL), C(10, 13, 2, ...GOLD),
       PX(5, 31, "#9b6bd6"), PX(27, 31, "#9b6bd6"), PX(16, 31, "#9b6bd6")], { face: { x: 15, y: 17, gap: 5, style: "angry", mouth: "fang" }, outline: "#3b1d63" }),
+    strep: () => makeBlob(24, [C(4, 6, 3, ...ORANGE), C(8, 9, 3, ...ORANGE), C(12, 12, 3.5, ...ORANGE), C(16, 15, 3, ...ORANGE), C(20, 18, 3, ...ORANGE)],
+      { face: { x: 11, y: 11, gap: 2, mouth: "grin" } }),
+    rhino: () => makeBlob(24, [...spikes(12, 13, 6, 8, 2, "#4fb0a0", "#a8f0e0", 0), C(12, 13, 6, "#7fd6c4", "#3f9a8a", "#d8fff6")],
+      { face: { x: 11, y: 12, gap: 2, mouth: "smile" } }),
+    pseudo: () => makeBlob(24, [EL(11, 12, 8, 4, "#6fc7d9", "#3a8fa3", "#d0f4fb"), L(19, 12, 21, 10, "#3a8fa3"), L(21, 10, 23, 12, "#3a8fa3"), L(23, 12, 23, 14, "#3a8fa3"),
+      PX(4, 17, "#9b6bd6"), PX(8, 18, "#9b6bd6"), PX(14, 18, "#9b6bd6"), PX(6, 6, "#9b6bd6"), PX(15, 6, "#9b6bd6")], { face: { x: 10, y: 11, gap: 3, mouth: "grin" } }),
     // player cells (24x24)
     Neutrophil: () => makeBlob(24, [C(12, 12, 10, "#ece5f8", "#c3b6e0", "#ffffff"), C(8, 9, 3, "#8a63c7", "#5e3f99"), C(13, 7, 3, "#8a63c7", "#5e3f99"), C(17, 10, 3, "#8a63c7", "#5e3f99"),
       L(10, 9, 12, 8, "#5e3f99"), L(15, 8, 16, 9, "#5e3f99")], { face: { x: 11, y: 14, gap: 3, mouth: "smile" } }),
@@ -228,8 +234,63 @@ const SPR = (() => {
       x.fillStyle = OUT; x.fillRect(4, 6, 7, 4); x.beginPath(); x.moveTo(10, 3); x.lineTo(15, 8); x.lineTo(10, 13); x.fill();
       x.fillStyle = "#ffe066"; x.fillRect(5, 7, 6, 2); x.beginPath(); x.moveTo(11, 5); x.lineTo(14, 8); x.lineTo(11, 11); x.fill();
     });
+    T.hub = tile(x => {   // clinic floor: soft tiles
+      x.fillStyle = P.path; x.fillRect(0, 0, 16, 16);
+      x.fillStyle = P.pathDot; x.fillRect(0, 0, 16, 1); x.fillRect(0, 0, 1, 16); x.fillRect(8, 0, 1, 16); x.fillRect(0, 8, 16, 1);
+      x.fillStyle = "#ffffff"; x.globalAlpha = 0.5; x.fillRect(2, 2, 2, 1); x.fillRect(10, 10, 2, 1); x.globalAlpha = 1;
+    });
+    T.decor = tile(x => {
+      speck(x, P.floor, [[P.floorDot, 6]], 13);
+      if (P.decor === "fat") {            // fat cells: big yellow bubbles
+        for (const [cx, cy, r] of [[5, 6, 4.5], [11, 9, 4.5], [5, 12, 3.5]]) {
+          x.fillStyle = OUT; x.beginPath(); x.arc(cx, cy, r + 1, 0, 7); x.fill();
+          x.fillStyle = "#f7dc7a"; x.beginPath(); x.arc(cx, cy, r, 0, 7); x.fill();
+          x.fillStyle = "#fff4c0"; x.fillRect(cx - 2, cy - 2, 2, 1); x.fillStyle = "#c9a23a"; x.fillRect(cx + 1, cy + 1, 1, 1);
+        }
+      } else if (P.decor === "cilia") {   // cilia: waving hair-like tufts
+        x.fillStyle = OUT; x.fillRect(2, 13, 12, 2);
+        for (let i = 0; i < 6; i++) { const bx = 3 + i * 2; x.fillStyle = P.wallDk; x.fillRect(bx, 4 + (i % 2), 1, 9); x.fillStyle = P.wallHi; x.fillRect(bx, 3 + (i % 2), 1, 2); }
+      } else {                            // stitches: a healing cut held by dark-blue thread
+        x.fillStyle = "#e7c9b9"; x.fillRect(0, 7, 16, 3); x.fillStyle = "#b8645a"; x.fillRect(0, 8, 16, 1);
+        x.fillStyle = "#2a3d8f"; for (let i = 0; i < 3; i++) for (let k = 0; k < 7; k++) x.fillRect(2 + i * 5 + Math.floor(k / 2), 5 + k, 1, 1);
+      }
+    });
     return T;
   }
-  return { person, CREATURES, makeTiles, OUT };
+  // supply pack (overworld pickup): white case with a green plus
+  const ITEM = (() => { const g = fromRows([
+    "................",
+    "................",
+    "................",
+    "......kkkk......",
+    ".....k....k.....",
+    "...kkkkkkkkkk...",
+    "...kwwwwwwwwk...",
+    "...kwwwggwwwk...",
+    "...kwwggggwwk...",
+    "...kwwwggwwwk...",
+    "...kwwwwwwwwk...",
+    "...kddddddddk...",
+    "...kkkkkkkkkk...",
+    "................",
+    "................",
+    "................"], { k: OUT, w: "#ffffff", g: "#3fb35f", d: "#cfc7d9" }); return toCanvas(g); })();
+  const BUBBLE = toCanvas(fromRows([
+    ".kkkkkkk.",
+    "kwwwrwwwk",
+    "kwwwrwwwk",
+    "kwwwrwwwk",
+    "kwwwwwwwk",
+    "kwwwrwwwk",
+    ".kkkkkkk.",
+    "...kwk...",
+    "....k...."], { k: OUT, w: "#ffffff", r: "#e0524f" }));
+  const BADGE = toCanvas(fromRows([
+    "..k..",
+    ".kyk.",
+    "kyyyk",
+    ".kyk.",
+    "k.k.k"].map(r => r.replace(/k/g, "k")), { k: OUT, y: "#f2c94c" }));
+  return { person, CREATURES, makeTiles, OUT, ITEM, BUBBLE, BADGE };
 })();
 if (typeof module !== "undefined") module.exports = SPR;
