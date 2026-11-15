@@ -61,6 +61,10 @@ export const Board: React.FC<{ w: number; h: number; x: number; y: number; tray?
   );
 };
 
+// Frame where a ChalkWrite with this text, delay and speed finishes writing (keep in sync with ChalkWrite below).
+export const writeEnd = (text: string, delay: number, speed = 1.1) =>
+  text.split(" ").reduce((t, w) => t + Math.max(5, w.replace(/\*/g, "").length * speed) + 3, delay);
+
 // Chalk text that gets written word by word (left-to-right reveal), with an optional highlighted *word*.
 export const ChalkWrite: React.FC<{ text: string; delay: number; size: number; font?: string; color?: string; hot?: string;
   speed?: number; style?: React.CSSProperties; underlineHot?: boolean }> =
@@ -71,7 +75,7 @@ export const ChalkWrite: React.FC<{ text: string; delay: number; size: number; f
     if (w.startsWith("*")) inside = true;
     const isHot = inside; if (w.endsWith("*")) inside = false;
     const clean = w.replace(/\*/g, ""), start = t, dur = Math.max(5, clean.length * speed);
-    t += dur + 2;
+    t += dur + 3;
     return { w: clean, isHot, start, dur };
   });
   return (

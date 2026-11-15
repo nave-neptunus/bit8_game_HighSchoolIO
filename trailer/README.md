@@ -1,6 +1,6 @@
 # Immune Response trailer (handoff)
 
-An 81-second presentation video for the game, made with [Remotion](https://www.remotion.dev/) from real gameplay.
+An 80-second (1:20) presentation video for the game, made with [Remotion](https://www.remotion.dev/) from real gameplay.
 The finished video is committed at [`immune-response-trailer.mp4`](immune-response-trailer.mp4) (1920x1080, 30 fps, H.264 + AAC).
 
 Look: a sunny classroom. The game's handheld sits on the left; on the right a green chalkboard in a wood frame
@@ -8,20 +8,23 @@ Look: a sunny classroom. The game's handheld sits on the left; on the right a gr
 "why it matters" stat and the end card are full chalkboards. The previous dark "tech" look was dropped because it
 read as AI-made.
 
-## Story (10 sections, all in `src/edit.ts`)
+## Story (6 lessons, all in `src/edit.ts`)
+
+Paced slowly on purpose: an earlier cut had 10 short sections and felt rushed, so related clips were merged into
+6 longer lessons (5 to 18 s each), chalk writes at 1.7 frames per letter, and the sticky note only lands after the
+headline and body have had time to be read. Clips that end on static text hold their last frame (`HOLD` in
+`src/edit.ts`). Total is exactly 2,400 frames (1:20).
 
 | # | Gameplay clips | Board headline | Sticky note (the education beat) |
 | --- | --- | --- | --- |
 | 1 | title | learn how your body fights back | Your immune system is a team of cells, and each one has a job. |
-| 2 | grass | germs hide in the grass | Germs get in through breaks in the skin, like a scraped knee. |
-| 3 | battle | real cells, real jobs | Neutrophils rush in first. Pus is mostly dead neutrophils! |
-| 4 | captain | meet the germs | Staph and strep are bacteria that can infect an open cut. |
-| 5 | area2, pharmacist | free antibiotics? | The flu is caused by a virus, not bacteria. |
-| 6 | abx | they can't kill viruses | Antibiotics do not work on viruses (CDC). |
-| 7 | journal | real science in every germ | About 1 in 3 people carry staph in their nose (CDC). |
-| 8 | boss1, boss2 | a boss in every area | NK cells find infected cells that try to hide. |
-| 9 | sb_intro, sb_culture, sb_clean, sb_target | think like a doctor | Biofilms shield bacteria, so doctors test before they treat. |
-| 10 | end_a, end_b | choices have consequences | Wasting antibiotics helps bacteria become resistant. |
+| 2 | grass, battle | real cells, real jobs | Neutrophils rush in first. Pus is mostly dead neutrophils! |
+| 3 | captain, journal | meet the germs | About 1 in 3 people carry staph in their nose (CDC). |
+| 4 | area2, pharmacist, abx | free antibiotics? | The flu is a virus. Antibiotics do not work on viruses (CDC). |
+| 5 | sb_intro, sb_culture, sb_clean, sb_target | think like a doctor | Biofilms shield bacteria, so doctors test before they treat. |
+| 6 | end_a, end_b | choices have consequences | Wasting antibiotics helps bacteria become resistant. |
+
+The boss1 / boss2 clips are captured but unused in this cut.
 
 Then the impact board (1.27 million deaths directly caused by drug-resistant infections in 2019, GRAM study,
 The Lancet 2022) and the end card (what kids learn, play link). Every fact matches the sourced science notes in the
@@ -100,7 +103,7 @@ Tips:
 - Use `--timeout 120000` on renders and stills; the first load of 2,000+ PNGs can time out at the default.
 - Check single frames fast: `npx remotion still src/index.ts Trailer out/f.png --frame=600`.
 - If you change the game's look or maps, re-capture; if you change only words or timing, edit `src/edit.ts`
-  (and the `joins` list in `capture/qa.py`) and re-render.
+  (and the `segs` list in `capture/qa.py`) and re-render.
 - After editing captions, re-check that the headline + body fit above the sticky note (the board is 690x640).
 
 ## Skills that shaped the edit
@@ -113,6 +116,6 @@ Tips:
 
 ## Status and ideas
 
-Done: classroom restyle, full render with game audio, QA'd cuts and loudness.
-Ideas: a 60-second cut (drop section 7 or 8 and trim the long clips), a vertical 9:16 version for social
-(stack the handheld above the board), voice-over.
+Done: classroom restyle, slower 6-lesson 1:20 cut, full render with game audio, QA'd cuts and loudness.
+Ideas: a vertical 9:16 version for social (stack the handheld above the board), voice-over, re-capture to show
+the new camera gesture attacks (added to the game after this capture).

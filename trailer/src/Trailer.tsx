@@ -3,9 +3,9 @@ import { AbsoluteFill, Audio, Img, Sequence, interpolate, spring, staticFile, us
 import { TransitionSeries, linearTiming } from "@remotion/transitions";
 import { fade } from "@remotion/transitions/fade";
 import { Wall, Grade, Grain, Vignette } from "./components/Layers";
-import { Board, ChalkWrite, ChalkStroke, StickyNote, chalkTexture } from "./components/Chalk";
+import { Board, ChalkWrite, ChalkStroke, StickyNote, chalkTexture, writeEnd } from "./components/Chalk";
 import { theme, clamp, SpringCfg } from "./theme";
-import { SEGMENTS, Seg, INTRO, IMPACT, OUTRO, TRANS, clipFrames, segFrames, timeline } from "./edit";
+import { SEGMENTS, Seg, INTRO, IMPACT, OUTRO, TRANS, HOLD, clipFrames, segFrames, timeline } from "./edit";
 
 const C = theme.colors;
 const CELLS = ["neutrophil", "macrophage", "nk", "killer_t", "b"];
@@ -17,7 +17,7 @@ const BOARD = { x: 1160, y: 92, w: 690, h: 640 };
 // One clip = a numbered PNG sequence captured frame by frame from the real game, plus its rendered game audio.
 const Clip: React.FC<{ name: string }> = ({ name }) => {
   const frame = useCurrentFrame();
-  const n = clipFrames(name), f = Math.min(frame, n - 1);
+  const n = clipFrames(name), f = Math.min(frame, n - (HOLD[name] ?? 0) - 1);   // held clips freeze on their last captured frame
   const vol = interpolate(frame, [0, 4, n - 8, n], [0, 1, 1, 0], clamp);
   return (
     <>
@@ -52,10 +52,12 @@ const Handheld: React.FC<{ seg: Seg }> = ({ seg }) => {
 const Lesson: React.FC<{ seg: Seg; dur: number; index: number }> = ({ seg, dur, index }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const erase = interpolate(frame, [dur - 12, dur - 1], [0, 1], { ...clamp, easing: theme.ease.in });
-  const headEnd = 10 + seg.head.replace(/\*/g, "").length * 1.1 + seg.head.split(" ").length * 2;
-  const note = spring({ frame: frame - (headEnd + 22), fps, config: theme.spring.bouncy });
-  const fadeIn = (d: number) => interpolate(frame, [d, d + 10], [0, 1], { ...clamp, easing: theme.ease.out });
+  // unhurried: slow chalk, body eases in after the headline, the sticky note lands once the body has been read
+  const SPEED = 1.7;
+  const erase = interpolate(frame, [dur - 16, dur - 1], [0, 1], { ...clamp, easing: theme.ease.in });
+  const headEnd = writeEnd(seg.head, 12, SPEED);
+  const note = spring({ frame: frame - Math.min(headEnd + 50, dur * 0.45), fps, config: theme.spring.smooth });
+  const fadeIn = (d: number) => interpolate(frame, [d, d + 18], [0, 1], { ...clamp, easing: theme.ease.out });
   const [num, ...name] = seg.kicker.split(/\s+/);
   return (
     <>
@@ -64,9 +66,9 @@ const Lesson: React.FC<{ seg: Seg; dur: number; index: number }> = ({ seg, dur, 
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: theme.fonts.hand, fontSize: 30, color: C.chalkDim, opacity: fadeIn(2), ...chalkTexture }}>
             <span>Lesson {Number(num)}: {name.join(" ").toLowerCase()}</span>
           </div>
-          <ChalkWrite text={seg.head} delay={10} size={80} style={{ marginTop: 22, fontWeight: 700 }} />
-          <div style={{ marginTop: 30, fontFamily: theme.fonts.hand, fontSize: 30, lineHeight: 1.38, color: C.chalkDim, opacity: fadeIn(headEnd + 4),
-            transform: `translateY(${(1 - fadeIn(headEnd + 4)) * 10}px)`, ...chalkTexture }}>{seg.body}</div>
+          <ChalkWrite text={seg.head} delay={12} size={80} speed={SPEED} style={{ marginTop: 22, fontWeight: 700 }} />
+          <div style={{ marginTop: 30, fontFamily: theme.fonts.hand, fontSize: 30, lineHeight: 1.38, color: C.chalkDim, opacity: fadeIn(headEnd + 6),
+            transform: `translateY(${(1 - fadeIn(headEnd + 6)) * 10}px)`, ...chalkTexture }}>{seg.body}</div>
         </div>
       </Board>
       {/* the education beat, on a sticky note slapped onto the board */}

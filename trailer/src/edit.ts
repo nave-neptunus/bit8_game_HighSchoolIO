@@ -7,34 +7,28 @@ export type Seg = { clips: string[]; kicker: string; head: string; body: string;
 export const SEGMENTS: Seg[] = [
   { clips: ["title"], kicker: "01  THE MISSION", head: "learn how your body *fights back*", body: "A pixel RPG for middle schoolers. Your team is made of real immune cells.",
     learn: "Your immune system is a team of cells, and each one has a job.", join: "fade" },
-  { clips: ["grass"], kicker: "02  EXPLORE", head: "germs hide in the *grass*", body: "Explore three areas inside a patient: a scraped knee, flu-filled lungs and an infected stitch.",
-    learn: "Germs get in through breaks in the skin, like a scraped knee.", join: "cut" },
-  { clips: ["battle"], kicker: "03  BATTLE", head: "real cells, *real jobs*", body: "Each cell fights the way it does in your body. Pick the move that is STRONG against that germ.",
+  { clips: ["grass", "battle"], kicker: "02  BATTLE", head: "real cells, *real jobs*", body: "Germs jump out of the grass. Each cell fights the way it does in your body.",
     learn: "Neutrophils rush in first. Pus is mostly dead neutrophils!", join: "fade" },
-  { clips: ["captain"], kicker: "04  CAPTAINS", head: "meet the *germs*", body: "Germ Captains are real bacteria and viruses. Beat them all to reach the boss.",
-    learn: "Staph and strep are bacteria that can infect an open cut.", join: "fade" },
-  { clips: ["area2", "pharmacist"], kicker: "05  THE TRAP", head: "free *antibiotics?*", body: "Maya has the flu. A pharmacist offers antibiotics. Do you take them?",
-    learn: "The flu is caused by a virus, not bacteria.", join: "fade" },
-  { clips: ["abx"], kicker: "06  THE LESSON", head: "they *can't* kill viruses", body: "Every wasted dose gives bacteria practice, so the final boss gets stronger.",
-    learn: "Antibiotics do not work on viruses (CDC).", join: "fade" },
-  { clips: ["journal"], kicker: "07  GERM JOURNAL", head: "real science in *every germ*", body: "The Germ Journal fills up as you play, with a sourced fact for each germ.",
+  { clips: ["captain", "journal"], kicker: "03  THE GERMS", head: "meet the *germs*", body: "Germ Captains are real bacteria and viruses. The Germ Journal gives a real fact for each one.",
     learn: "About 1 in 3 people carry staph in their nose (CDC).", join: "fade" },
-  { clips: ["boss1", "boss2"], kicker: "08  BOSSES", head: "a boss in *every* area", body: "Each boss teaches one idea: toxins, viruses that copy themselves, and superbugs.",
-    learn: "NK cells find infected cells that try to hide.", join: "fade" },
-  { clips: ["sb_intro", "sb_culture", "sb_clean", "sb_target"], kicker: "09  FINAL BOSS", head: "think like a *doctor*", body: "A lab culture finds the right drug, debridement cleans off the biofilm, then the targeted antibiotic.",
+  { clips: ["area2", "pharmacist", "abx"], kicker: "04  THE TRAP", head: "free *antibiotics?*", body: "Maya has the flu. A pharmacist offers antibiotics. Every wasted dose makes the final boss stronger.",
+    learn: "The flu is a virus. Antibiotics do not work on viruses (CDC).", join: "fade" },
+  { clips: ["sb_intro", "sb_culture", "sb_clean", "sb_target"], kicker: "05  FINAL BOSS", head: "think like a *doctor*", body: "Test with a lab culture, clean off the biofilm, then use the one drug that works.",
     learn: "Biofilms shield bacteria, so doctors test before they treat.", join: "fade" },
-  { clips: ["end_a", "end_b"], kicker: "10  THE ENDING", head: "choices have *consequences*", body: "The ending shows how many antibiotics you wasted and what that means in real life.",
+  { clips: ["end_a", "end_b"], kicker: "06  THE ENDING", head: "choices have *consequences*", body: "The ending shows how many antibiotics you wasted and what that means in real life.",
     learn: "Wasting antibiotics helps bacteria become resistant.", join: "fade" },
 ];
 
 export const FPS = 30;
-export const INTRO = 105;
-export const IMPACT = 165;
+export const INTRO = 110;
+export const IMPACT = 180;
 export const OUTRO = 195;
 export const TRANS = 14;
 
 const frames: Record<string, number> = Object.fromEntries(clipData.clips.map((c: { name: string; frames: number }) => [c.name, c.frames]));
-export const clipFrames = (name: string) => frames[name] ?? 1;
+// Extra frames that hold a clip's last frame (static text screens), so it can be read.
+export const HOLD: Record<string, number> = { end_b: 12 };
+export const clipFrames = (name: string) => (frames[name] ?? 1) + (HOLD[name] ?? 0);
 export const segFrames = (s: Seg) => s.clips.reduce((t, c) => t + clipFrames(c), 0);
 
 // Absolute timeline (TransitionSeries overlaps each transition with both neighbours).

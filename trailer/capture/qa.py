@@ -8,9 +8,10 @@ FF = imageio_ffmpeg.get_ffmpeg_exe()
 vid, out = sys.argv[1], sys.argv[2]
 proj = Path(__file__).resolve().parents[1]   # the trailer/ Remotion project
 f = {c["name"]: c["frames"] for c in json.load(open(f"{proj}/src/clips.json"))["clips"]}
-segs = [["title"],["grass"],["battle"],["captain"],["area2","pharmacist"],["abx"],["journal"],["boss1","boss2"],["sb_intro","sb_culture","sb_clean","sb_target"],["end_a","end_b"]]
-joins = ["fade","cut","fade","fade","fade","fade","fade","fade","fade","fade"]   # keep in sync with src/edit.ts
-t = 105 - 14; marks = [("intro end", t + 14)]
+f["end_b"] += 12   # HOLD in src/edit.ts
+segs = [["title"],["grass","battle"],["captain","journal"],["area2","pharmacist","abx"],["sb_intro","sb_culture","sb_clean","sb_target"],["end_a","end_b"]]   # keep in sync with src/edit.ts
+joins = ["fade"] * len(segs)
+t = 110 - 14; marks = [("intro end", t + 14)]
 for s, j in zip(segs, joins):
     start = t; acc = 0
     for c in s[1:]:
@@ -18,7 +19,7 @@ for s, j in zip(segs, joins):
     t += sum(f[c] for c in s)
     if j != "cut": t -= 14
     marks.append((f"after {s[-1]} ({j})", t + 14 + 4))
-marks.append(("outro", t + 165 - 14 + 30))
+marks.append(("outro", t + 180 - 14 + 30))
 W, H = 480, 270; cols = 4
 sheet = Image.new("RGB", (cols * W, ((len(marks) + cols - 1) // cols) * H), "black")
 for i, (lab, fr) in enumerate(marks):
