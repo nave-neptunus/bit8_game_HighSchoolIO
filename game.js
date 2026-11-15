@@ -132,6 +132,7 @@ window.addEventListener("keydown", e => {
   if (KEYMAP[e.key]) { e.preventDefault(); held.add(KEYMAP[e.key]); if (!e.repeat) menuNav(KEYMAP[e.key]); }
   if (["z", "Z", "Enter", " "].includes(e.key)) { e.preventDefault(); if (!e.repeat) press("A"); }
   if (["x", "X", "Escape", "Backspace"].includes(e.key)) { e.preventDefault(); if (!e.repeat) press("B"); }
+  if (/^[1-4]$/.test(e.key) && G.mode === "battle") { e.preventDefault(); if (!e.repeat) window.submitGestureMove(Number(e.key) - 1, "key"); }
 });
 window.addEventListener("keyup", e => { if (KEYMAP[e.key]) { held.delete(KEYMAP[e.key]); G.noBump = false; } });
 document.querySelectorAll("[data-dir]").forEach(b => {
@@ -182,6 +183,7 @@ function advanceDialog() {
 function say(text) { G.type = null; boxText.textContent = text; boxText.classList.remove("more"); }
 function menu(prompt, items, opts = {}) {
   G.dlg = null; G.type = null; boxText.classList.remove("more");
+  G.menuContext = null;
   boxText.textContent = prompt; boxMenu.innerHTML = ""; boxHint.textContent = opts.hint || "";
   G.menu = { back: opts.back };
   boxMenu.className = opts.cols === 1 ? "one" : "";
@@ -212,7 +214,7 @@ function menuNav(d) {
   const step = { left: -1, right: 1, up: -cols, down: cols }[d];
   G.menuFocus = (G.menuFocus + step + n) % n; focusMenu(); sfx("blip"); return true;
 }
-function clearBox() { G.menu = null; G.dlg = null; G.type = null; G.view = null; boxMenu.innerHTML = ""; boxText.textContent = ""; boxHint.textContent = ""; boxText.classList.remove("more"); }
+function clearBox() { G.menu = null; G.menuContext = null; G.dlg = null; G.type = null; G.view = null; boxMenu.innerHTML = ""; boxText.textContent = ""; boxHint.textContent = ""; boxText.classList.remove("more"); }
 const UP = s => s.toUpperCase();
 
 // ---------- start menu ----------
@@ -225,8 +227,10 @@ function startMenu(focus) {
     { label: "JOURNAL", fn: () => journalMenu(), hint: `Germ Journal: ${seen}/${JOURNAL.length} germs seen.` },
     { label: "SAVE", fn: () => { const ok = writeSave(); sfx("save"); dialog([ok ? "Game saved! Choose CONTINUE on the title screen to keep playing." : "Couldn't save: this browser is blocking storage."], clearBox); }, hint: "Save your game in this browser." },
     { label: SND.isOn() ? "SOUND: ON" : "SOUND: OFF", fn: () => { SND.toggle(); startMenu(4); }, hint: "Turn music and sound effects on or off." },
+    { label: `CAMERA ATTACKS: ${GestureCV.isEnabled() ? "ON" : "OFF"}`, fn: async () => { if (GestureCV.isEnabled()) GestureCV.disable(); else await GestureCV.enable(); startMenu(5); }, hint: "Optional hand gestures choose battle moves. Keyboard and touch still work." },
     { label: "CLOSE", fn: clearBox, hint: "Back to the game." },
   ], { back: clearBox, focus });
+  G.menuContext = "start";
 }
 function teamMenu() {
   G.view = null;
@@ -436,6 +440,8 @@ function mainMenu() {
     { label: "CELLS", fn: cellsMenu, hint: "Switch to another immune cell. Uses your turn." },
     { label: "RUN", fn: () => act({ k: "run" }), disabled: !B.wild, hint: B.wild ? "Get away from a wild germ." : "You can't run from this fight!" },
   ]);
+  G.menuContext = "battle-main";
+  GestureCV.setMoveNames(B.cur().moves.slice(0, 4).map(m => m.name));
 }
 function hintFor(m, e) {
   if (m.type === "Signal") return { tag: "SUPPORT", cls: "sup" };
@@ -456,7 +462,24 @@ function fightMenu() {
       hint: `${m.type === "Signal" ? "Support" : m.type + " " + m.power}${m.aoe ? " (all)" : ""}: ${m.desc}`, fn: () => pickTarget(m) };
   });
   menu(`${cellName()}'s moves:`, items, { back: mainMenu, cols: 1 });
+  G.menuContext = "battle-moves";
+  GestureCV.setMoveNames(c.moves.slice(0, 4).map(m => m.name));
 }
+// A held gesture or number key selects one of the active cell's first four moves.
+// This is the only game action entry point for the camera; it never drives menus or movement.
+window.canUseGestureAttack = () => G.mode === "battle" && B && !B.over && !G.dlg && !G.type &&
+  !!G.menu && ["battle-main", "battle-moves"].includes(G.menuContext) && B.available(B.cur()) && !busy();
+window.submitGestureMove = (index, source = "key") => {
+  if (!window.canUseGestureAttack() || index < 0 || index > 3) return false;
+  if (source === "gesture" && !GestureCV.isEnabled()) return false;
+  const move = B.cur().moves[index]; if (!move) return false;
+  const choices = B.actions().filter(a => a.k === "move" && a.m === move);
+  if (!choices.length) return false;
+  const score = a => a.e && move.type !== "Signal" ? B.effOf(B.cur(), move, a.e) : 1;
+  const chosen = choices.reduce((best, a) => !best || score(a) > score(best) ? a : best, null);
+  act(chosen);
+  return true;
+};
 function pickTarget(m) {
   const acts = B.actions().filter(a => a.k === "move" && a.m === m);
   if (acts.length === 1) return act(acts[0]);
@@ -538,8 +561,14 @@ function titleMenu() {
   } });
   items.push({ label: "LEVEL SELECT", hint: "Jump straight to any area with a ready-made team.", fn: levelSelect });
   items.push({ label: SND.isOn() ? "SOUND: ON" : "SOUND: OFF", fn: () => { SND.toggle(); titleMenu(); }, hint: "Turn music and sound effects on or off." });
+  items.push({ label: `CAMERA ATTACKS: ${GestureCV.isEnabled() ? "ON" : "OFF"}`, fn: async () => { if (GestureCV.isEnabled()) GestureCV.disable(); else await GestureCV.enable(); titleMenu(); }, hint: "Optional hand gestures choose battle moves. Normal controls stay available." });
   menu("Arrows/WASD move. Z = A (talk, confirm). X = B (back, menu).", items, { cols: 1 });
+  G.menuContext = "title";
 }
+window.addEventListener("gesture-mode-change", () => {
+  if (G.menu && G.menuContext === "title") titleMenu();
+  else if (G.menu && G.menuContext === "start") startMenu(5);
+});
 const LEVEL_INFO = {
   1: "Maya scraped her knee. Team: Neutrophil + Macrophage. Learn type matchups and Immune Memory.",
   2: "Maya has the flu. Team adds NK Cell + Killer T Cell. Watch out for the pharmacist's offer!",
