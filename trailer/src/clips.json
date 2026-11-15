@@ -1,0 +1,72 @@
+{
+ "clips": [
+  {
+   "name": "title",
+   "frames": 227
+  },
+  {
+   "name": "grass",
+   "frames": 123
+  },
+  {
+   "name": "battle",
+   "frames": 263
+  },
+  {
+   "name": "captain",
+   "frames": 206
+  },
+  {
+   "name": "area2",
+   "frames": 54
+  },
+  {
+   "name": "pharmacist",
+   "frames": 149
+  },
+  {
+   "name": "abx",
+   "frames": 149
+  },
+  {
+   "name": "journal",
+   "frames": 139
+  },
+  {
+   "name": "boss1",
+   "frames": 57
+  },
+  {
+   "name": "boss2",
+   "frames": 57
+  },
+  {
+   "name": "sb_intro",
+   "frames": 162
+  },
+  {
+   "name": "sb_culture",
+   "frames": 128
+  },
+  {
+   "name": "sb_clean",
+   "frames": 130
+  },
+  {
+   "name": "sb_target",
+   "frames": 130
+  },
+  {
+   "name": "end_a",
+   "frames": 43
+  },
+  {
+   "name": "end_b",
+   "frames": 112
+  },
+  {
+   "name": "credits",
+   "frames": 135
+  }
+ ]
+}
