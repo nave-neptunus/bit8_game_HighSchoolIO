@@ -35,6 +35,7 @@ root `CLAUDE.md`.
 
 ## Files
 
+- `src/TitleSlide.tsx`: the presentation title slide (`npx remotion still src/index.ts TitleSlide title-slide.png`), saved as `title-slide.png`.
 - `src/edit.ts`: the edit decision list. Segments (clips, kicker, headline with `*punch*` words, body, learn line,
   join), lengths of intro / impact / outro, and `timeline()` which computes absolute frame positions.
 - `src/Trailer.tsx`: the composition. `Handheld` plays the clip PNG sequences with a small zoom punch on hard cuts,
