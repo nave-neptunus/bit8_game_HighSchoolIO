@@ -1,0 +1,11 @@
+<!DOCTYPE html><html><body style="background:#2a2238;margin:0"><canvas id=c width=1000 height=560></canvas>
+<script src="sprites.js"></script><script>
+const c=document.getElementById('c'),x=c.getContext('2d');x.imageSmoothingEnabled=false;
+x.fillStyle='#fff';x.font='12px monospace';
+let px=10,py=10;
+const pals={MC:{t:"#2fb6a8",w:"#f4f4f0",c:"#2fb6a8"},Nurse:{t:"#f28bb3",w:"#f7c7da",c:"#f28bb3",h:"#2b1a12",s:"#c98d64"},Pharm:{t:"#5fbf6a",w:"#e8f5e8",c:"#5fbf6a",h:"#c9c9c9"},Lab:{t:"#8a63c7",w:"#e9e1f7",c:"#8a63c7",h:"#d9a05b",s:"#8a5a3c"}};
+for(const [n,p] of Object.entries(pals)){const P=SPR.person(p);let i=0;for(const d of['down','up','left','right'])for(const f of [0,1,3]){x.drawImage(P[d][f],px+i*68,py,64,64);i++;}x.fillText(n,px,py+76);py+=86;}
+let i=0;py=360;for(const [n,f] of Object.entries(SPR.CREATURES)){const cv=f();const sz=cv.width*3;x.drawImage(cv,10+(i%12)*82,py+(i>=12?100:0),sz>96?96:sz,sz>96?96:sz);x.fillText(n.slice(0,11),10+(i%12)*82,py+108);i++;}
+const pals2=[{floor:"#f2c6a0",floorDot:"#e8b48c",floorDot2:"#fbd9ba",path:"#f8dcc0",pathDot:"#e9c6a2",grass:"#e0524f",grassDk:"#a83232",wall:"#e7a08a",wallDk:"#b8644f",wallHi:"#f7c9b8",wallNuc:"#8a3e30",water:"#b5303a",waterHi:"#d9555c",waterCell:"#e8737a"}];
+const T=SPR.makeTiles(pals2[0]);let j=0;for(const [n,t] of Object.entries(T)){const arr=Array.isArray(t)?t:[t];for(const tt of arr){x.drawImage(tt,830+(j%3)*52,10+Math.floor(j/3)*52,48,48);j++;}}
+</script></body></html>
